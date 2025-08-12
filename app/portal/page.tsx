@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,8 +32,70 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Mock data for notifications and quiz results
+const mockNotifications = [
+  {
+    id: 1,
+    from: "Dr. Smith",
+    subject: "New Assignment Posted",
+    message: "A new assignment has been posted for Biology 101. Please check your course materials.",
+    timestamp: "2024-01-15T10:30:00Z",
+    seen: false,
+    type: "assignment",
+  },
+  {
+    id: 2,
+    from: "Prof. Johnson",
+    subject: "Quiz Results Available",
+    message: "Your quiz results for Mathematics are now available. Great job on improving your scores!",
+    timestamp: "2024-01-14T15:45:00Z",
+    seen: false,
+    type: "results",
+  },
+  {
+    id: 3,
+    from: "Admin",
+    subject: "System Maintenance",
+    message: "The system will undergo maintenance this weekend. Please save your work.",
+    timestamp: "2024-01-13T09:00:00Z",
+    seen: true,
+    type: "system",
+  },
+]
+
+const mockQuizResults = [
+  {
+    id: 1,
+    quizName: "Biology Quiz 1",
+    score: 85,
+    totalQuestions: 20,
+    correctAnswers: 17,
+    incorrectQuestions: [
+      {
+        question: "What is photosynthesis?",
+        studentAnswer: "Respiration",
+        correctAnswer: "Process of making food using sunlight",
+      },
+      { question: "Name the powerhouse of cell", studentAnswer: "Nucleus", correctAnswer: "Mitochondria" },
+      { question: "What is DNA?", studentAnswer: "Protein", correctAnswer: "Deoxyribonucleic acid" },
+    ],
+    date: "2024-01-10",
+  },
+  {
+    id: 2,
+    quizName: "Mathematics Quiz 2",
+    score: 92,
+    totalQuestions: 15,
+    correctAnswers: 14,
+    incorrectQuestions: [{ question: "What is 15 × 7?", studentAnswer: "95", correctAnswer: "105" }],
+    date: "2024-01-12",
+  },
+]
 
 export default function StudentPortal() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -45,6 +107,20 @@ export default function StudentPortal() {
   const [idNumber, setIdNumber] = useState("")
   const [fullName, setFullName] = useState("")
   const [address, setAddress] = useState("")
+
+  const [notifications, setNotifications] = useState(mockNotifications)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [selectedNotification, setSelectedNotification] = useState<any>(null)
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false)
+
+  const [quizResults] = useState(mockQuizResults)
+  const [selectedQuizResult, setSelectedQuizResult] = useState<any>(null)
+  const [quizResultModalOpen, setQuizResultModalOpen] = useState(false)
+
+  useEffect(() => {
+    const unread = notifications.filter((n) => !n.seen).length
+    setUnreadCount(unread)
+  }, [notifications])
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -82,6 +158,23 @@ export default function StudentPortal() {
         setKycCompleted(true)
       }, 3000)
     }
+  }
+
+  const markNotificationAsSeen = (notificationId: number) => {
+    setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, seen: true } : n)))
+  }
+
+  const openNotification = (notification: any) => {
+    setSelectedNotification(notification)
+    setNotificationModalOpen(true)
+    if (!notification.seen) {
+      markNotificationAsSeen(notification.id)
+    }
+  }
+
+  const openQuizResult = (result: any) => {
+    setSelectedQuizResult(result)
+    setQuizResultModalOpen(true)
   }
 
   const getKycStatusIcon = () => {
@@ -171,13 +264,20 @@ export default function StudentPortal() {
                   !sidebarOpen && "justify-center",
                 )}
               >
-                <Icon
-                  className={cn(
-                    "w-5 h-5 transition-transform duration-200",
-                    isActive && "scale-110",
-                    !isDisabled && "group-hover:scale-110",
+                <div className="relative">
+                  <Icon
+                    className={cn(
+                      "w-5 h-5 transition-transform duration-200",
+                      isActive && "scale-110",
+                      !isDisabled && "group-hover:scale-110",
+                    )}
+                  />
+                  {item.id === "notifications" && unreadCount > 0 && (
+                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount}
+                    </div>
                   )}
-                />
+                </div>
                 <span
                   className={cn(
                     "font-medium transition-opacity duration-200",
@@ -193,6 +293,7 @@ export default function StudentPortal() {
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                     {item.label}
                     {item.id === "kyc" && ` (${getKycStatusText()})`}
+                    {item.id === "notifications" && unreadCount > 0 && ` (${unreadCount} unread)`}
                   </div>
                 )}
               </button>
@@ -265,6 +366,102 @@ export default function StudentPortal() {
                   <Button className="bg-green-600 hover:bg-green-700">Create Note</Button>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {activeTab === "notifications" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Recent Notifications</h2>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  {unreadCount} unread
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <Card
+                    key={notification.id}
+                    className={cn(
+                      "cursor-pointer transition-all hover:shadow-md",
+                      !notification.seen && "border-green-200 bg-green-50",
+                    )}
+                    onClick={() => openNotification(notification)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h4 className="font-medium text-gray-900">{notification.subject}</h4>
+                            {!notification.seen && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">From: {notification.from}</p>
+                          <p className="text-sm text-gray-700 line-clamp-2">{notification.message}</p>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          {notification.seen ? (
+                            <Eye className="w-4 h-4 text-gray-400" />
+                          ) : (
+                            <EyeOff className="w-4 h-4 text-green-500" />
+                          )}
+                          <span className="text-xs text-gray-500">
+                            {new Date(notification.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "results" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Quiz Results</h2>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  Average: 88.5%
+                </Badge>
+              </div>
+
+              <div className="grid gap-4">
+                {quizResults.map((result) => (
+                  <Card key={result.id} className="cursor-pointer hover:shadow-md transition-all">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg mb-2">{result.quizName}</h3>
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <span>Score: {result.score}%</span>
+                            <span>
+                              Correct: {result.correctAnswers}/{result.totalQuestions}
+                            </span>
+                            <span>Date: {result.date}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div
+                            className={cn(
+                              "text-2xl font-bold",
+                              result.score >= 90
+                                ? "text-green-600"
+                                : result.score >= 80
+                                  ? "text-yellow-600"
+                                  : "text-red-600",
+                            )}
+                          >
+                            {result.score}%
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => openQuizResult(result)}>
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
 
@@ -410,7 +607,7 @@ export default function StudentPortal() {
 
                           <div className="space-y-4">
                             <Label>Upload ID Document</Label>
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 relative">
                               {uploadedImage ? (
                                 <div className="space-y-4">
                                   <img
@@ -432,12 +629,20 @@ export default function StudentPortal() {
                                       Click to upload or drag and drop your ID document
                                     </p>
                                     <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+                                    <Button
+                                      variant="outline"
+                                      className="mt-2 bg-transparent"
+                                      onClick={() => document.getElementById("file-upload")?.click()}
+                                    >
+                                      Choose File
+                                    </Button>
                                   </div>
                                   <input
+                                    id="file-upload"
                                     type="file"
                                     accept="image/*"
                                     onChange={handleImageUpload}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    className="hidden"
                                   />
                                 </div>
                               )}
@@ -505,7 +710,7 @@ export default function StudentPortal() {
           )}
 
           {/* Placeholder content for other tabs */}
-          {!["notes", "kyc", "dashboard"].includes(activeTab) && (
+          {!["notes", "kyc", "dashboard", "notifications", "results"].includes(activeTab) && (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -525,6 +730,101 @@ export default function StudentPortal() {
           )}
         </div>
       </div>
+
+      <Dialog open={notificationModalOpen} onOpenChange={setNotificationModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedNotification?.subject}</DialogTitle>
+            <DialogDescription>
+              From: {selectedNotification?.from} •{" "}
+              {selectedNotification && new Date(selectedNotification.timestamp).toLocaleString()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-800">{selectedNotification?.message}</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <Badge
+                variant={
+                  selectedNotification?.type === "assignment"
+                    ? "default"
+                    : selectedNotification?.type === "results"
+                      ? "secondary"
+                      : "outline"
+                }
+              >
+                {selectedNotification?.type}
+              </Badge>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <Eye className="w-4 h-4" />
+                <span>Marked as read</span>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={quizResultModalOpen} onOpenChange={setQuizResultModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedQuizResult?.quizName} - Detailed Results</DialogTitle>
+            <DialogDescription>
+              Score: {selectedQuizResult?.score}% • {selectedQuizResult?.correctAnswers}/
+              {selectedQuizResult?.totalQuestions} correct • {selectedQuizResult?.date}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="grid grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{selectedQuizResult?.score}%</div>
+                  <p className="text-sm text-gray-600">Overall Score</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{selectedQuizResult?.correctAnswers}</div>
+                  <p className="text-sm text-gray-600">Correct Answers</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {selectedQuizResult?.incorrectQuestions?.length || 0}
+                  </div>
+                  <p className="text-sm text-gray-600">Incorrect Answers</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {selectedQuizResult?.incorrectQuestions && selectedQuizResult.incorrectQuestions.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-red-600">Questions to Review</h3>
+                <div className="space-y-4">
+                  {selectedQuizResult.incorrectQuestions.map((question: any, index: number) => (
+                    <Card key={index} className="border-red-200">
+                      <CardContent className="p-4">
+                        <h4 className="font-medium mb-2">{question.question}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-red-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-red-800 mb-1">Your Answer:</p>
+                            <p className="text-red-700">{question.studentAnswer}</p>
+                          </div>
+                          <div className="bg-green-50 p-3 rounded-lg">
+                            <p className="text-sm font-medium text-green-800 mb-1">Correct Answer:</p>
+                            <p className="text-green-700">{question.correctAnswer}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
