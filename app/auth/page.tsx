@@ -24,7 +24,6 @@ export default function AuthPage() {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    studentId: "",
     childName: "",
     grade: "",
   })
@@ -35,6 +34,12 @@ export default function AuthPage() {
       setMode("signup")
     }
   }, [searchParams])
+
+  const generateStudentId = () => {
+    const year = new Date().getFullYear()
+    const randomNum = Math.floor(Math.random() * 9000) + 1000
+    return `SA${year}${randomNum}`
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,8 +83,12 @@ export default function AuthPage() {
         ...formData,
         role,
         id: Math.random().toString(36).substr(2, 9),
+        studentId: role === "student" ? generateStudentId() : undefined,
         createdAt: new Date().toISOString(),
         kycStatus: role === "student" ? "pending" : "not_required",
+        completedNotes: [],
+        completedQuizzes: [],
+        progress: {},
       }
 
       // Store user in users array
@@ -272,19 +281,6 @@ export default function AuthPage() {
               )}
 
               {/* Role-specific fields for signup */}
-              {mode === "signup" && role === "student" && (
-                <div className="space-y-2">
-                  <Label htmlFor="studentId">Student ID</Label>
-                  <Input
-                    id="studentId"
-                    value={formData.studentId}
-                    onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                    placeholder="e.g., SA2024001"
-                    required
-                  />
-                </div>
-              )}
-
               {mode === "signup" && role === "parent" && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

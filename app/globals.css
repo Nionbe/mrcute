@@ -122,7 +122,77 @@
   }
 }
 
-/* Added custom animations for sidebar */
+/* Enhanced floating animations for educational themed elements */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translateY(-15px) rotate(45deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-25px) rotate(90deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-15px) rotate(135deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes float-reverse {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.5;
+  }
+  25% {
+    transform: translateY(20px) rotate(-45deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(30px) rotate(-90deg);
+    opacity: 0.9;
+  }
+  75% {
+    transform: translateY(20px) rotate(-135deg);
+    opacity: 0.7;
+  }
+}
+
+@keyframes float-gentle {
+  0%,
+  100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+    opacity: 0.4;
+  }
+  33% {
+    transform: translateY(-10px) translateX(5px) rotate(60deg);
+    opacity: 0.6;
+  }
+  66% {
+    transform: translateY(-5px) translateX(-5px) rotate(120deg);
+    opacity: 0.8;
+  }
+}
+
+.floating-element {
+  animation: float 8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.floating-element:nth-child(2n) {
+  animation: float-reverse 10s ease-in-out infinite;
+}
+
+.floating-element:nth-child(3n) {
+  animation: float-gentle 12s ease-in-out infinite;
+}
+
+/* Smooth fade in animation for page elements */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -135,14 +205,123 @@
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.6s ease-out;
 }
 
-/* Added smooth transitions for sidebar elements */
+/* Enhanced smooth transitions for better performance */
+.transition-all {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth hover effects with better performance */
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease-out;
+}
+
+/* Enhanced pulse animation for chat button */
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 15px rgba(34, 197, 94, 0);
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse {
+  animation: pulse-green 2s infinite;
+}
+
+/* Smooth fade in up animation for cards */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+/* Enhanced sidebar animations */
 .sidebar-item {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-item:hover {
   transform: translateX(4px);
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+/* Smooth loading animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Enhanced button hover effects */
+.btn-hover-effect {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-hover-effect::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-hover-effect:hover::before {
+  left: 100%;
+}
+
+/* Smooth card animations */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Responsive animations that respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+  .floating-element,
+  .animate-pulse,
+  .animate-fade-in,
+  .animate-fade-in-up {
+    animation: none;
+  }
+
+  .transition-all,
+  .sidebar-item,
+  .card-hover {
+    transition: none;
+  }
 }

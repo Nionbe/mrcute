@@ -98,18 +98,6 @@ export default function StudentDashboard() {
     setQuizTimer((prev) => ({ ...prev, [quizId]: duration * 60 }))
   }
 
-  const submitQuiz = (quizId: string) => {
-    setActiveQuiz(null)
-    // Simulate quiz submission
-    alert("Quiz submitted successfully!")
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
-
   const handleKycSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -127,17 +115,77 @@ export default function StudentDashboard() {
     localStorage.setItem("safari_user", JSON.stringify(updatedUser))
     setUser(updatedUser)
 
-    // Simulate approval after 3 seconds
+    // Simulate AI review process (5-10 minutes)
+    const reviewTime = Math.floor(Math.random() * 5 + 5) * 60 * 1000 // 5-10 minutes in milliseconds
+
     setTimeout(() => {
       setKycStatus("approved")
       const approvedUser = { ...updatedUser, kycStatus: "approved" }
       localStorage.setItem("safari_user", JSON.stringify(approvedUser))
       setUser(approvedUser)
-      alert("KYC verification approved! You now have full access to all features.")
-    }, 3000)
+      alert("KYC verification approved by AI! You now have full access to all features.")
+    }, reviewTime)
 
     setKycModalOpen(false)
-    alert("KYC documents submitted successfully! Verification in progress...")
+    alert(`KYC documents submitted successfully! AI review in progress (${Math.floor(reviewTime / 60000)} minutes)...`)
+  }
+
+  const markNoteAsCompleted = (noteId: string) => {
+    const updatedUser = {
+      ...user,
+      completedNotes: [...(user.completedNotes || []), noteId],
+    }
+    localStorage.setItem("safari_user", JSON.stringify(updatedUser))
+    setUser(updatedUser)
+  }
+
+  const markQuizAsCompleted = (quizId: string) => {
+    const updatedUser = {
+      ...user,
+      completedQuizzes: [...(user.completedQuizzes || []), quizId],
+    }
+    localStorage.setItem("safari_user", JSON.stringify(updatedUser))
+    setUser(updatedUser)
+  }
+
+  const submitQuiz = (quizId: string) => {
+    setActiveQuiz(null)
+    markQuizAsCompleted(quizId)
+    alert("Quiz submitted successfully and marked as completed!")
+  }
+
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: "New Assignment Posted",
+      message: "Mathematics homework due tomorrow",
+      read: false,
+      timestamp: "2 hours ago",
+    },
+    {
+      id: 2,
+      title: "Grade Updated",
+      message: "Your English essay has been graded: 85%",
+      read: false,
+      timestamp: "1 day ago",
+    },
+    {
+      id: 3,
+      title: "Quiz Reminder",
+      message: "History quiz starts in 30 minutes",
+      read: true,
+      timestamp: "2 days ago",
+    },
+  ])
+
+  const markNotificationAsRead = (notificationId: number) => {
+    setNotifications((prev) => prev.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif)))
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,6 +360,7 @@ export default function StudentDashboard() {
               { id: "grades", label: "Grades", icon: Award },
               { id: "kyc", label: "KYC Verification", icon: Shield },
               { id: "profile", label: "Profile", icon: User },
+              { id: "notifications", label: "Notifications", icon: Bell },
             ].map((item) => (
               <button
                 key={item.id}
@@ -364,10 +413,10 @@ export default function StudentDashboard() {
                   KYC Required
                 </Badge>
               )}
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setActiveTab("notifications")}>
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
-                <Badge className="ml-2 bg-red-500">3</Badge>
+                <Badge className="ml-2 bg-red-500">{notifications.filter((n) => !n.read).length}</Badge>
               </Button>
             </div>
           </div>
@@ -545,18 +594,29 @@ export default function StudentDashboard() {
                         <div className="flex space-x-2">
                           {assignment.status === "pending" && (
                             <>
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" onClick={() => alert("Assignment downloaded!")}>
                                 <Download className="w-4 h-4 mr-2" />
                                 Download
                               </Button>
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => {
+                                  alert("Assignment submitted successfully!")
+                                  // Update assignment status
+                                }}
+                              >
                                 <Upload className="w-4 h-4 mr-2" />
                                 Submit
                               </Button>
                             </>
                           )}
                           {assignment.status === "submitted" && (
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => alert("Viewing your submission details...")}
+                            >
                               <CheckCircle className="w-4 h-4 mr-2" />
                               View Submission
                             </Button>
@@ -689,38 +749,52 @@ export default function StudentDashboard() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold">Study Notes</h2>
-                <Input placeholder="Search notes..." className="max-w-sm" />
+                <Badge variant="secondary">{user.completedNotes?.length || 0} completed</Badge>
               </div>
 
-              <div className="grid gap-4">
-                {notes.map((note) => (
-                  <Card key={note.id} className={`border-green-100 ${!note.read ? "bg-green-50" : ""}`}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-lg flex items-center space-x-2">
-                            <span>{note.title}</span>
-                            {!note.read && (
-                              <Badge variant="secondary" className="text-xs">
-                                New
-                              </Badge>
-                            )}
-                          </CardTitle>
-                          <CardDescription>
-                            {note.subject} • {note.date}
-                          </CardDescription>
+              <div className="grid gap-6">
+                {notes.map((note) => {
+                  const isCompleted = user.completedNotes?.includes(note.id)
+                  return (
+                    <Card key={note.id} className="border-green-100">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg flex items-center space-x-2">
+                              <span>{note.title}</span>
+                              {isCompleted && <Badge className="bg-green-600">Completed</Badge>}
+                            </CardTitle>
+                            <CardDescription>
+                              {note.subject} • {note.date}
+                            </CardDescription>
+                          </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600">{note.content}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-600 mb-4">{note.content}</p>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              alert("Opening note content...")
+                              if (!isCompleted) {
+                                markNoteAsCompleted(note.id)
+                              }
+                            }}
+                          >
+                            <BookOpen className="w-4 h-4 mr-2" />
+                            {isCompleted ? "Read Again" : "Read Note"}
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -956,20 +1030,25 @@ export default function StudentDashboard() {
                             <div>
                               <Label htmlFor="idImage">Upload ID Document</Label>
                               <div className="mt-2">
-                                <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full h-32 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors bg-transparent"
+                                  onClick={() => document.getElementById("idImageInput")?.click()}
+                                >
                                   <div className="text-center">
                                     <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                                     <p className="text-sm text-gray-600">Click to upload ID image</p>
-                                    <input
-                                      type="file"
-                                      id="idImage"
-                                      accept="image/*"
-                                      onChange={handleImageUpload}
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                      required
-                                    />
                                   </div>
-                                </div>
+                                </Button>
+                                <input
+                                  type="file"
+                                  id="idImageInput"
+                                  accept="image/*"
+                                  onChange={handleImageUpload}
+                                  className="hidden"
+                                  required
+                                />
                                 {kycData.idImage && (
                                   <p className="text-sm text-emerald-600 mt-2">✓ {kycData.idImage.name} uploaded</p>
                                 )}
@@ -993,12 +1072,18 @@ export default function StudentDashboard() {
                   {kycStatus === "submitted" && (
                     <div className="text-center py-8">
                       <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Clock className="w-8 h-8 text-yellow-600" />
+                        <Clock className="w-8 h-8 text-yellow-600 animate-spin" />
                       </div>
-                      <h3 className="text-lg font-medium mb-2">Verification in Progress</h3>
+                      <h3 className="text-lg font-medium mb-2">AI Verification in Progress</h3>
                       <p className="text-gray-600">
-                        Your documents are being reviewed. This usually takes 1-2 business days.
+                        Our AI system is reviewing your documents. This usually takes 5-10 minutes for fast processing.
                       </p>
+                      <div className="mt-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="bg-green-600 h-2 rounded-full animate-pulse" style={{ width: "60%" }}></div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">Processing... Please wait</p>
+                      </div>
                     </div>
                   )}
 
@@ -1087,6 +1172,38 @@ export default function StudentDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "notifications" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">Notifications</h2>
+                <Badge variant="secondary">{notifications.filter((n) => !n.read).length} unread</Badge>
+              </div>
+
+              <div className="space-y-4">
+                {notifications.map((notification) => (
+                  <Card
+                    key={notification.id}
+                    className={`border-green-100 cursor-pointer transition-all ${!notification.read ? "bg-green-50" : ""}`}
+                    onClick={() => markNotificationAsRead(notification.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className={`font-medium ${!notification.read ? "text-green-700" : "text-gray-700"}`}>
+                            {notification.title}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                          <p className="text-xs text-gray-400 mt-2">{notification.timestamp}</p>
+                        </div>
+                        {!notification.read && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           )}
