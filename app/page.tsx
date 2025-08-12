@@ -68,38 +68,38 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-md border-b border-blue-100 sticky top-0 z-50">
+      <nav className="bg-white/80 backdrop-blur-md border-b border-green-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-green-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-500 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                 Safari Academy
               </span>
             </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">
+              <a href="#features" className="text-gray-600 hover:text-green-600 transition-colors">
                 Features
               </a>
-              <a href="#testimonials" className="text-gray-600 hover:text-blue-600 transition-colors">
+              <a href="#testimonials" className="text-gray-600 hover:text-green-600 transition-colors">
                 Testimonials
               </a>
-              <a href="#contact" className="text-gray-600 hover:text-blue-600 transition-colors">
+              <a href="#contact" className="text-gray-600 hover:text-green-600 transition-colors">
                 Contact
               </a>
               <Link href="/auth">
-                <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent">
+                <Button variant="outline" className="border-green-200 text-green-600 hover:bg-green-50 bg-transparent">
                   Sign In
                 </Button>
               </Link>
               <Link href="/auth?mode=signup">
-                <Button className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
+                <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
                   Get Started
                 </Button>
               </Link>
@@ -123,27 +123,27 @@ export default function HomePage() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-blue-100">
+            <div className="md:hidden py-4 border-t border-green-100">
               <div className="flex flex-col space-y-4">
-                <a href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">
+                <a href="#features" className="text-gray-600 hover:text-green-600 transition-colors">
                   Features
                 </a>
-                <a href="#testimonials" className="text-gray-600 hover:text-blue-600 transition-colors">
+                <a href="#testimonials" className="text-gray-600 hover:text-green-600 transition-colors">
                   Testimonials
                 </a>
-                <a href="#contact" className="text-gray-600 hover:text-blue-600 transition-colors">
+                <a href="#contact" className="text-gray-600 hover:text-green-600 transition-colors">
                   Contact
                 </a>
                 <Link href="/auth">
                   <Button
                     variant="outline"
-                    className="w-full border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+                    className="w-full border-green-200 text-green-600 hover:bg-green-50 bg-transparent"
                   >
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/auth?mode=signup">
-                  <Button className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700">
+                  <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
                     Get Started
                   </Button>
                 </Link>
@@ -157,12 +157,12 @@ export default function HomePage() {
       <section className="relative py-20 lg:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <Badge className="mb-6 bg-blue-100 text-blue-700 hover:bg-blue-200">
+            <Badge className="mb-6 bg-green-100 text-green-700 hover:bg-green-200">
               🎓 Welcome to the Future of Education
             </Badge>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
               Empower Learning with{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                 Safari Academy
               </span>
             </h1>
@@ -174,7 +174,7 @@ export default function HomePage() {
               <Link href="/auth?mode=signup">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 px-8"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-8"
                 >
                   Start Learning Today
                 </Button>
@@ -183,7 +183,7 @@ export default function HomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50 px-8 bg-transparent"
+                  className="border-green-200 text-green-600 hover:bg-green-50 px-8 bg-transparent"
                 >
                   Sign In to Continue
                 </Button>
@@ -209,11 +209,11 @@ export default function HomePage() {
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="border-blue-100 hover:border-blue-200 transition-all duration-300 hover:shadow-lg"
+                className="border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg"
               >
                 <CardHeader>
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-green-100 rounded-lg flex items-center justify-center mb-4">
-                    <feature.icon className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mb-4">
+                    <feature.icon className="w-6 h-6 text-green-600" />
                   </div>
                   <CardTitle className="text-gray-900">{feature.title}</CardTitle>
                 </CardHeader>
@@ -237,12 +237,12 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="text-center border-blue-100 hover:border-blue-200 transition-all duration-300 hover:shadow-lg">
+            <Card className="text-center border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg">
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <BookOpen className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-blue-600">Students</CardTitle>
+                <CardTitle className="text-green-600">Students</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 text-sm">
@@ -251,12 +251,12 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="text-center border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg">
+            <Card className="text-center border-emerald-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-lg">
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-green-600">Teachers</CardTitle>
+                <CardTitle className="text-emerald-600">Teachers</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 text-sm">
@@ -265,12 +265,12 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="text-center border-purple-100 hover:border-purple-200 transition-all duration-300 hover:shadow-lg">
+            <Card className="text-center border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg">
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-purple-600">Parents</CardTitle>
+                <CardTitle className="text-green-600">Parents</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 text-sm">
@@ -279,12 +279,12 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="text-center border-orange-100 hover:border-orange-200 transition-all duration-300 hover:shadow-lg">
+            <Card className="text-center border-emerald-100 hover:border-emerald-200 transition-all duration-300 hover:shadow-lg">
               <CardHeader>
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <BarChart3 className="w-8 h-8 text-white" />
                 </div>
-                <CardTitle className="text-orange-600">Admins</CardTitle>
+                <CardTitle className="text-emerald-600">Admins</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-gray-600 text-sm">
@@ -308,7 +308,7 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border-blue-100">
+              <Card key={index} className="border-green-100">
                 <CardHeader>
                   <div className="flex items-center space-x-1 mb-2">
                     {[...Array(testimonial.rating)].map((_, i) => (
@@ -316,7 +316,7 @@ export default function HomePage() {
                     ))}
                   </div>
                   <CardTitle className="text-lg">{testimonial.name}</CardTitle>
-                  <CardDescription className="text-blue-600">{testimonial.role}</CardDescription>
+                  <CardDescription className="text-green-600">{testimonial.role}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-gray-600 italic">"{testimonial.content}"</p>
@@ -328,17 +328,17 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-green-600">
+      <section className="py-20 bg-gradient-to-r from-green-600 to-emerald-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
             Ready to Transform Your Educational Experience?
           </h2>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="text-xl text-green-100 mb-8">
             Join thousands of students, teachers, and parents already using Safari Academy
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth?mode=signup">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8">
+              <Button size="lg" className="bg-white text-green-600 hover:bg-gray-100 px-8">
                 Get Started Free
               </Button>
             </Link>
@@ -361,7 +361,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div className="col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-green-500 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-500 rounded-lg flex items-center justify-center">
                   <GraduationCap className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold">Safari Academy</span>

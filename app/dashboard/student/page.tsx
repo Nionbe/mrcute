@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,6 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import {
   BookOpen,
   Clock,
@@ -26,6 +36,8 @@ import {
   LogOut,
   Menu,
   X,
+  Shield,
+  Camera,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -35,23 +47,34 @@ export default function StudentDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [kycModalOpen, setKycModalOpen] = useState(false)
+  const [kycData, setKycData] = useState({
+    fullName: "",
+    idNumber: "",
+    dateOfBirth: "",
+    address: "",
+    phoneNumber: "",
+    idImage: null as File | null,
+  })
+  const [kycStatus, setKycStatus] = useState("pending") // pending, submitted, approved, rejected
+
+  useEffect(() => {
+    // Get user data from localStorage
+    const userData = localStorage.getItem("safari_user")
+    if (userData) {
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      setKycStatus(parsedUser.kycStatus || "pending")
+    } else {
+      router.push("/auth")
+    }
+  }, [router])
 
   // Quiz timer state
   const [quizTimer, setQuizTimer] = useState<{ [key: string]: number }>({})
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null)
   const [quizAnswers, setQuizAnswers] = useState<{ [key: string]: { [key: string]: string } }>({})
 
-  useEffect(() => {
-    // Get user data from localStorage
-    const userData = localStorage.getItem("safari_user")
-    if (userData) {
-      setUser(JSON.parse(userData))
-    } else {
-      router.push("/auth")
-    }
-  }, [router])
-
-  // Quiz timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout
     if (activeQuiz && quizTimer[activeQuiz] > 0) {
@@ -85,6 +108,43 @@ export default function StudentDashboard() {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, "0")}`
+  }
+
+  const handleKycSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Validate ID number matches student ID
+    if (kycData.idNumber !== user.studentId) {
+      alert("ID Number must match your Student ID: " + user.studentId)
+      return
+    }
+
+    // Simulate KYC submission
+    setKycStatus("submitted")
+
+    // Update user data
+    const updatedUser = { ...user, kycStatus: "submitted", kycData }
+    localStorage.setItem("safari_user", JSON.stringify(updatedUser))
+    setUser(updatedUser)
+
+    // Simulate approval after 3 seconds
+    setTimeout(() => {
+      setKycStatus("approved")
+      const approvedUser = { ...updatedUser, kycStatus: "approved" }
+      localStorage.setItem("safari_user", JSON.stringify(approvedUser))
+      setUser(approvedUser)
+      alert("KYC verification approved! You now have full access to all features.")
+    }, 3000)
+
+    setKycModalOpen(false)
+    alert("KYC documents submitted successfully! Verification in progress...")
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setKycData({ ...kycData, idImage: file })
+    }
   }
 
   // Mock data
@@ -198,7 +258,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -210,13 +270,13 @@ export default function StudentDashboard() {
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        <div className="p-6 border-b border-blue-100">
+        <div className="p-6 border-b border-green-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-green-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-500 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+              <span className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                 Safari Academy
               </span>
             </div>
@@ -227,7 +287,7 @@ export default function StudentDashboard() {
           <div className="mt-4 flex items-center space-x-3">
             <Avatar>
               <AvatarImage src="/placeholder.svg?height=40&width=40" />
-              <AvatarFallback className="bg-blue-100 text-blue-600">
+              <AvatarFallback className="bg-green-100 text-green-600">
                 {user.firstName?.[0]}
                 {user.lastName?.[0]}
               </AvatarFallback>
@@ -250,6 +310,7 @@ export default function StudentDashboard() {
               { id: "notes", label: "Notes", icon: BookOpen },
               { id: "attendance", label: "Attendance", icon: CalendarIcon },
               { id: "grades", label: "Grades", icon: Award },
+              { id: "kyc", label: "KYC Verification", icon: Shield },
               { id: "profile", label: "Profile", icon: User },
             ].map((item) => (
               <button
@@ -259,11 +320,16 @@ export default function StudentDashboard() {
                   setSidebarOpen(false)
                 }}
                 className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-                  activeTab === item.id ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-100"
+                  activeTab === item.id ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
+                {item.id === "kyc" && kycStatus === "pending" && (
+                  <Badge variant="destructive" className="text-xs">
+                    !
+                  </Badge>
+                )}
               </button>
             ))}
           </div>
@@ -284,7 +350,7 @@ export default function StudentDashboard() {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b border-blue-100 p-4">
+        <header className="bg-white shadow-sm border-b border-green-100 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
@@ -293,6 +359,11 @@ export default function StudentDashboard() {
               <h1 className="text-2xl font-bold text-gray-900">Student Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
+              {kycStatus === "pending" && (
+                <Badge variant="destructive" className="animate-pulse">
+                  KYC Required
+                </Badge>
+              )}
               <Button variant="outline" size="sm">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
@@ -304,13 +375,33 @@ export default function StudentDashboard() {
 
         {/* Content */}
         <main className="p-6">
+          {/* KYC Warning Banner */}
+          {kycStatus === "pending" && (
+            <Card className="border-red-200 bg-red-50 mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <div>
+                      <p className="font-medium text-red-800">KYC Verification Required</p>
+                      <p className="text-sm text-red-600">Complete your identity verification to access all features</p>
+                    </div>
+                  </div>
+                  <Button onClick={() => setActiveTab("kyc")} className="bg-red-600 hover:bg-red-700">
+                    Verify Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {activeTab === "overview" && (
             <div className="space-y-6">
               {/* Welcome Card */}
-              <Card className="border-blue-100 bg-gradient-to-r from-blue-500 to-green-500 text-white">
+              <Card className="border-green-100 bg-gradient-to-r from-green-500 to-emerald-500 text-white">
                 <CardHeader>
                   <CardTitle className="text-2xl">Welcome back, {user.firstName}!</CardTitle>
-                  <CardDescription className="text-blue-100">
+                  <CardDescription className="text-green-100">
                     You have 2 pending assignments and 1 upcoming quiz
                   </CardDescription>
                 </CardHeader>
@@ -318,20 +409,20 @@ export default function StudentDashboard() {
 
               {/* Quick Stats */}
               <div className="grid md:grid-cols-4 gap-6">
-                <Card className="border-blue-100">
+                <Card className="border-green-100">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Pending Assignments</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">2</div>
+                    <div className="text-2xl font-bold text-green-600">2</div>
                   </CardContent>
                 </Card>
-                <Card className="border-green-100">
+                <Card className="border-emerald-100">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-gray-600">Upcoming Quizzes</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">1</div>
+                    <div className="text-2xl font-bold text-emerald-600">1</div>
                   </CardContent>
                 </Card>
                 <Card className="border-purple-100">
@@ -354,7 +445,7 @@ export default function StudentDashboard() {
 
               {/* Recent Activity */}
               <div className="grid lg:grid-cols-2 gap-6">
-                <Card className="border-blue-100">
+                <Card className="border-green-100">
                   <CardHeader>
                     <CardTitle>Recent Assignments</CardTitle>
                   </CardHeader>
@@ -381,7 +472,7 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-green-100">
+                <Card className="border-emerald-100">
                   <CardHeader>
                     <CardTitle>Upcoming Deadlines</CardTitle>
                   </CardHeader>
@@ -420,7 +511,7 @@ export default function StudentDashboard() {
 
               <div className="grid gap-6">
                 {assignments.map((assignment) => (
-                  <Card key={assignment.id} className="border-blue-100">
+                  <Card key={assignment.id} className="border-green-100">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
@@ -448,7 +539,7 @@ export default function StudentDashboard() {
                         <div className="flex items-center space-x-4">
                           <span className="text-sm text-gray-500">Points: {assignment.points}</span>
                           {assignment.grade && (
-                            <span className="text-sm font-medium text-green-600">Grade: {assignment.grade}%</span>
+                            <span className="text-sm font-medium text-emerald-600">Grade: {assignment.grade}%</span>
                           )}
                         </div>
                         <div className="flex space-x-2">
@@ -458,7 +549,7 @@ export default function StudentDashboard() {
                                 <Download className="w-4 h-4 mr-2" />
                                 Download
                               </Button>
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
                                 <Upload className="w-4 h-4 mr-2" />
                                 Submit
                               </Button>
@@ -485,7 +576,7 @@ export default function StudentDashboard() {
 
               <div className="grid gap-6">
                 {quizzes.map((quiz) => (
-                  <Card key={quiz.id} className="border-green-100">
+                  <Card key={quiz.id} className="border-emerald-100">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
@@ -502,9 +593,9 @@ export default function StudentDashboard() {
                         <div className="space-y-4">
                           {activeQuiz === quiz.id ? (
                             <div className="space-y-4">
-                              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                              <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
                                 <span className="font-medium">Time Remaining:</span>
-                                <span className="text-2xl font-bold text-green-600">
+                                <span className="text-2xl font-bold text-emerald-600">
                                   {formatTime(quizTimer[quiz.id] || 0)}
                                 </span>
                               </div>
@@ -532,7 +623,7 @@ export default function StudentDashboard() {
                                                 },
                                               }))
                                             }}
-                                            className="text-blue-600"
+                                            className="text-green-600"
                                           />
                                           <span>{option}</span>
                                         </label>
@@ -543,7 +634,10 @@ export default function StudentDashboard() {
                               )}
 
                               <div className="flex space-x-2">
-                                <Button onClick={() => submitQuiz(quiz.id)} className="bg-green-600 hover:bg-green-700">
+                                <Button
+                                  onClick={() => submitQuiz(quiz.id)}
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                >
                                   Submit Quiz
                                 </Button>
                                 <Button variant="outline" onClick={() => setActiveQuiz(null)}>
@@ -559,7 +653,7 @@ export default function StudentDashboard() {
                               </div>
                               <Button
                                 onClick={() => startQuiz(quiz.id, quiz.duration)}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-emerald-600 hover:bg-emerald-700"
                               >
                                 <Play className="w-4 h-4 mr-2" />
                                 Start Quiz
@@ -572,7 +666,7 @@ export default function StudentDashboard() {
                       {quiz.status === "completed" && (
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-green-600">
+                            <p className="font-medium text-emerald-600">
                               Score: {quiz.score}/{quiz.totalQuestions} (
                               {Math.round((quiz.score! / quiz.totalQuestions!) * 100)}%)
                             </p>
@@ -600,7 +694,7 @@ export default function StudentDashboard() {
 
               <div className="grid gap-4">
                 {notes.map((note) => (
-                  <Card key={note.id} className={`border-blue-100 ${!note.read ? "bg-blue-50" : ""}`}>
+                  <Card key={note.id} className={`border-green-100 ${!note.read ? "bg-green-50" : ""}`}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
@@ -636,7 +730,7 @@ export default function StudentDashboard() {
               <h2 className="text-xl font-bold">Attendance</h2>
 
               <div className="grid lg:grid-cols-2 gap-6">
-                <Card className="border-blue-100">
+                <Card className="border-green-100">
                   <CardHeader>
                     <CardTitle>Attendance Calendar</CardTitle>
                   </CardHeader>
@@ -651,14 +745,14 @@ export default function StudentDashboard() {
                 </Card>
 
                 <div className="space-y-6">
-                  <Card className="border-green-100">
+                  <Card className="border-emerald-100">
                     <CardHeader>
                       <CardTitle>Attendance Summary</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center justify-between">
                         <span>Present Days</span>
-                        <span className="font-bold text-green-600">18</span>
+                        <span className="font-bold text-emerald-600">18</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Absent Days</span>
@@ -671,14 +765,14 @@ export default function StudentDashboard() {
                       <div className="pt-2 border-t">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">Attendance Rate</span>
-                          <span className="font-bold text-blue-600">90%</span>
+                          <span className="font-bold text-green-600">90%</span>
                         </div>
                         <Progress value={90} className="mt-2" />
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-blue-100">
+                  <Card className="border-green-100">
                     <CardHeader>
                       <CardTitle>Recent Attendance</CardTitle>
                     </CardHeader>
@@ -711,18 +805,18 @@ export default function StudentDashboard() {
               <h2 className="text-xl font-bold">Grades</h2>
 
               <div className="grid gap-6">
-                <Card className="border-blue-100">
+                <Card className="border-green-100">
                   <CardHeader>
                     <CardTitle>Overall Performance</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-3 gap-6">
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600">3.7</div>
+                        <div className="text-3xl font-bold text-green-600">3.7</div>
                         <p className="text-gray-600">Overall GPA</p>
                       </div>
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600">88%</div>
+                        <div className="text-3xl font-bold text-emerald-600">88%</div>
                         <p className="text-gray-600">Average Grade</p>
                       </div>
                       <div className="text-center">
@@ -733,7 +827,7 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-blue-100">
+                <Card className="border-green-100">
                   <CardHeader>
                     <CardTitle>Subject Grades</CardTitle>
                   </CardHeader>
@@ -746,7 +840,7 @@ export default function StudentDashboard() {
                             <p className="text-sm text-gray-600">{grade.credits} credits</p>
                           </div>
                           <div className="text-right">
-                            <div className="text-xl font-bold text-blue-600">{grade.grade}</div>
+                            <div className="text-xl font-bold text-green-600">{grade.grade}</div>
                             <div className="text-sm text-gray-600">{grade.percentage}%</div>
                           </div>
                         </div>
@@ -758,12 +852,178 @@ export default function StudentDashboard() {
             </div>
           )}
 
+          {activeTab === "kyc" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">KYC Verification</h2>
+                <Badge
+                  variant={
+                    kycStatus === "approved" ? "default" : kycStatus === "submitted" ? "secondary" : "destructive"
+                  }
+                  className="capitalize"
+                >
+                  {kycStatus}
+                </Badge>
+              </div>
+
+              <Card className="border-emerald-100">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Shield className="w-5 h-5" />
+                    <span>Identity Verification</span>
+                  </CardTitle>
+                  <CardDescription>Complete your KYC verification to access all platform features</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {kycStatus === "pending" && (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Important:</strong> Your ID number must match your Student ID:{" "}
+                          <strong>{user.studentId}</strong>
+                        </p>
+                      </div>
+
+                      <Dialog open={kycModalOpen} onOpenChange={setKycModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="bg-emerald-600 hover:bg-emerald-700">
+                            <Shield className="w-4 h-4 mr-2" />
+                            Start KYC Verification
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>KYC Verification</DialogTitle>
+                            <DialogDescription>Please provide your identification details</DialogDescription>
+                          </DialogHeader>
+
+                          <form onSubmit={handleKycSubmit} className="space-y-4">
+                            <div>
+                              <Label htmlFor="fullName">Full Name</Label>
+                              <Input
+                                id="fullName"
+                                value={kycData.fullName}
+                                onChange={(e) => setKycData({ ...kycData, fullName: e.target.value })}
+                                placeholder="Enter your full name"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="idNumber">ID Number (Must match Student ID)</Label>
+                              <Input
+                                id="idNumber"
+                                value={kycData.idNumber}
+                                onChange={(e) => setKycData({ ...kycData, idNumber: e.target.value })}
+                                placeholder={user.studentId}
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                              <Input
+                                id="dateOfBirth"
+                                type="date"
+                                value={kycData.dateOfBirth}
+                                onChange={(e) => setKycData({ ...kycData, dateOfBirth: e.target.value })}
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="address">Address</Label>
+                              <Input
+                                id="address"
+                                value={kycData.address}
+                                onChange={(e) => setKycData({ ...kycData, address: e.target.value })}
+                                placeholder="Enter your address"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="phoneNumber">Phone Number</Label>
+                              <Input
+                                id="phoneNumber"
+                                value={kycData.phoneNumber}
+                                onChange={(e) => setKycData({ ...kycData, phoneNumber: e.target.value })}
+                                placeholder="Enter your phone number"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="idImage">Upload ID Document</Label>
+                              <div className="mt-2">
+                                <div className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
+                                  <div className="text-center">
+                                    <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-600">Click to upload ID image</p>
+                                    <input
+                                      type="file"
+                                      id="idImage"
+                                      accept="image/*"
+                                      onChange={handleImageUpload}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                      required
+                                    />
+                                  </div>
+                                </div>
+                                {kycData.idImage && (
+                                  <p className="text-sm text-emerald-600 mt-2">✓ {kycData.idImage.name} uploaded</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex space-x-2 pt-4">
+                              <Button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                                Submit for Verification
+                              </Button>
+                              <Button type="button" variant="outline" onClick={() => setKycModalOpen(false)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
+
+                  {kycStatus === "submitted" && (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Clock className="w-8 h-8 text-yellow-600" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">Verification in Progress</h3>
+                      <p className="text-gray-600">
+                        Your documents are being reviewed. This usually takes 1-2 business days.
+                      </p>
+                    </div>
+                  )}
+
+                  {kycStatus === "approved" && (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">Verification Complete</h3>
+                      <p className="text-gray-600">
+                        Your identity has been successfully verified. You now have full access to all features.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {activeTab === "profile" && (
             <div className="space-y-6">
               <h2 className="text-xl font-bold">Profile</h2>
 
               <div className="grid lg:grid-cols-2 gap-6">
-                <Card className="border-blue-100">
+                <Card className="border-green-100">
                   <CardHeader>
                     <CardTitle>Personal Information</CardTitle>
                   </CardHeader>
@@ -771,7 +1031,7 @@ export default function StudentDashboard() {
                     <div className="flex items-center space-x-4">
                       <Avatar className="w-20 h-20">
                         <AvatarImage src="/placeholder.svg?height=80&width=80" />
-                        <AvatarFallback className="bg-blue-100 text-blue-600 text-xl">
+                        <AvatarFallback className="bg-green-100 text-green-600 text-xl">
                           {user.firstName?.[0]}
                           {user.lastName?.[0]}
                         </AvatarFallback>
@@ -804,7 +1064,7 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-green-100">
+                <Card className="border-emerald-100">
                   <CardHeader>
                     <CardTitle>Academic Information</CardTitle>
                   </CardHeader>

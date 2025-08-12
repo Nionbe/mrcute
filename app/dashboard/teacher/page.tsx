@@ -47,7 +47,16 @@ export default function TeacherDashboard() {
   const [user, setUser] = useState<any>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
-  const [selectedClass, setSelectedClass] = useState("math-10a")
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+
+  const [viewResultsModal, setViewResultsModal] = useState<string | null>(null)
+  const [viewDetailsModal, setViewDetailsModal] = useState<string | null>(null)
+  const [editModal, setEditModal] = useState<string | null>(null)
+  const [viewProfileModal, setViewProfileModal] = useState<string | null>(null)
+  const [messageModal, setMessageModal] = useState<string | null>(null)
+  const [attendanceModal, setAttendanceModal] = useState(false)
+  const [attendanceData, setAttendanceData] = useState<{ [key: string]: string }>({})
+  const [selectedClass, setSelectedClass] = useState<string | null>(null)
 
   // Form states
   const [assignmentForm, setAssignmentForm] = useState({
@@ -74,6 +83,7 @@ export default function TeacherDashboard() {
   })
 
   useEffect(() => {
+    // Get user data from localStorage
     const userData = localStorage.getItem("safari_user")
     if (userData) {
       setUser(JSON.parse(userData))
@@ -85,6 +95,56 @@ export default function TeacherDashboard() {
   const handleLogout = () => {
     localStorage.removeItem("safari_user")
     router.push("/")
+  }
+
+  const handleViewResults = (assignmentId: string) => {
+    setViewResultsModal(assignmentId)
+  }
+
+  const handleViewDetails = (assignmentId: string) => {
+    setViewDetailsModal(assignmentId)
+  }
+
+  const handleEdit = (assignmentId: string) => {
+    setEditModal(assignmentId)
+  }
+
+  const handleExportResults = (assignmentId: string) => {
+    // Simulate export functionality
+    const csvContent =
+      "Student Name,Grade,Submission Date\nJohn Doe,85,2024-01-10\nJane Smith,92,2024-01-09\nMike Johnson,78,2024-01-11"
+    const blob = new Blob([csvContent], { type: "text/csv" })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `assignment_${assignmentId}_results.csv`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const handleViewProfile = (studentId: string) => {
+    setViewProfileModal(studentId)
+  }
+
+  const handleMessage = (studentId: string) => {
+    setMessageModal(studentId)
+  }
+
+  const handleMarkAttendance = () => {
+    setAttendanceModal(true)
+  }
+
+  const submitAttendance = () => {
+    // Simulate attendance submission
+    alert("Attendance marked successfully!")
+    setAttendanceModal(false)
+    setAttendanceData({})
+  }
+
+  const sendMessage = (studentId: string, message: string) => {
+    // Simulate message sending
+    alert(`Message sent to student ${studentId}: ${message}`)
+    setMessageModal(null)
   }
 
   // Mock data
@@ -190,7 +250,7 @@ export default function TeacherDashboard() {
     },
   ]
 
-  const attendanceData = [
+  const attendanceDataOld = [
     { date: "2024-01-08", present: 26, absent: 2, late: 0 },
     { date: "2024-01-09", present: 25, absent: 1, late: 2 },
     { date: "2024-01-10", present: 28, absent: 0, late: 0 },
@@ -255,6 +315,19 @@ export default function TeacherDashboard() {
     }
     setQuizForm({ ...quizForm, questions: updatedQuestions })
   }
+
+  const quizzes = [
+    {
+      id: "1",
+      title: "History Quiz - World War II",
+      subject: "History",
+      duration: 30,
+      questions: 20,
+      completed: 16,
+      averageScore: 78,
+      status: "active",
+    },
+  ]
 
   if (!user) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
@@ -360,7 +433,7 @@ export default function TeacherDashboard() {
             <div className="flex items-center space-x-4">
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger className="w-48">
-                  <SelectValue />
+                  <SelectValue placeholder="Select Class" />
                 </SelectTrigger>
                 <SelectContent>
                   {classes.map((cls) => (
@@ -468,99 +541,11 @@ export default function TeacherDashboard() {
           {activeTab === "assignments" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Assignments</h2>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Assignment
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Create New Assignment</DialogTitle>
-                      <DialogDescription>
-                        Fill in the details to create a new assignment for your students.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="title">Assignment Title</Label>
-                          <Input
-                            id="title"
-                            value={assignmentForm.title}
-                            onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
-                            placeholder="e.g., Algebra Chapter 5"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="subject">Subject</Label>
-                          <Select
-                            value={assignmentForm.subject}
-                            onValueChange={(value) => setAssignmentForm({ ...assignmentForm, subject: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select subject" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mathematics">Mathematics</SelectItem>
-                              <SelectItem value="english">English</SelectItem>
-                              <SelectItem value="science">Science</SelectItem>
-                              <SelectItem value="history">History</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="dueDate">Due Date</Label>
-                          <Input
-                            id="dueDate"
-                            type="date"
-                            value={assignmentForm.dueDate}
-                            onChange={(e) => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="points">Total Points</Label>
-                          <Input
-                            id="points"
-                            type="number"
-                            value={assignmentForm.points}
-                            onChange={(e) => setAssignmentForm({ ...assignmentForm, points: e.target.value })}
-                            placeholder="100"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Textarea
-                          id="description"
-                          value={assignmentForm.description}
-                          onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
-                          placeholder="Brief description of the assignment"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="instructions">Instructions</Label>
-                        <Textarea
-                          id="instructions"
-                          value={assignmentForm.instructions}
-                          onChange={(e) => setAssignmentForm({ ...assignmentForm, instructions: e.target.value })}
-                          placeholder="Detailed instructions for students"
-                          rows={4}
-                        />
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline">Cancel</Button>
-                        <Button onClick={createAssignment} className="bg-green-600 hover:bg-green-700">
-                          Create Assignment
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <h2 className="text-xl font-bold">Assignment Management</h2>
+                <Button className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Assignment
+                </Button>
               </div>
 
               <div className="grid gap-6">
@@ -571,44 +556,198 @@ export default function TeacherDashboard() {
                         <div>
                           <CardTitle className="text-lg">{assignment.title}</CardTitle>
                           <CardDescription>
-                            {assignment.class} • Due: {assignment.dueDate}
+                            {assignment.subject} • Due: {assignment.dueDate} • {assignment.submissions} submissions
                           </CardDescription>
                         </div>
-                        <Badge variant={assignment.status === "completed" ? "default" : "secondary"}>
-                          {assignment.status}
-                        </Badge>
+                        <Badge variant="secondary">{assignment.status}</Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid md:grid-cols-3 gap-4 mb-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">
-                            {assignment.submissions}/{assignment.totalStudents}
+                      <p className="text-gray-600 mb-4">{assignment.description}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <span className="text-sm text-gray-500">Points: {assignment.points}</span>
+                          <span className="text-sm text-gray-500">Class Average: {assignment.averageGrade}%</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleViewDetails(assignment.id)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(assignment.id)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleExportResults(assignment.id)}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Export Results
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {viewDetailsModal && (
+                <Dialog open={!!viewDetailsModal} onOpenChange={() => setViewDetailsModal(null)}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Assignment Details</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Assignment Title</Label>
+                          <Input value="Mathematics Assignment - Algebra" readOnly />
+                        </div>
+                        <div>
+                          <Label>Subject</Label>
+                          <Input value="Mathematics" readOnly />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Description</Label>
+                        <textarea
+                          className="w-full p-2 border rounded-md"
+                          rows={3}
+                          value="Complete exercises 1-20 from Chapter 5. Show all work and provide detailed explanations for each solution."
+                          readOnly
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label>Due Date</Label>
+                          <Input value="2024-01-15" readOnly />
+                        </div>
+                        <div>
+                          <Label>Points</Label>
+                          <Input value="100" readOnly />
+                        </div>
+                        <div>
+                          <Label>Submissions</Label>
+                          <Input value="18/25" readOnly />
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+
+              {editModal && (
+                <Dialog open={!!editModal} onOpenChange={() => setEditModal(null)}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Edit Assignment</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Assignment Title</Label>
+                          <Input defaultValue="Mathematics Assignment - Algebra" />
+                        </div>
+                        <div>
+                          <Label>Subject</Label>
+                          <Input defaultValue="Mathematics" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Description</Label>
+                        <textarea
+                          className="w-full p-2 border rounded-md"
+                          rows={3}
+                          defaultValue="Complete exercises 1-20 from Chapter 5"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label>Due Date</Label>
+                          <Input type="date" defaultValue="2024-01-15" />
+                        </div>
+                        <div>
+                          <Label>Points</Label>
+                          <Input type="number" defaultValue="100" />
+                        </div>
+                        <div>
+                          <Label>Class</Label>
+                          <select className="w-full p-2 border rounded-md">
+                            <option>Grade 10-A</option>
+                            <option>Grade 10-B</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            alert("Assignment updated successfully!")
+                            setEditModal(null)
+                          }}
+                        >
+                          Save Changes
+                        </Button>
+                        <Button variant="outline" onClick={() => setEditModal(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+          )}
+
+          {activeTab === "quizzes" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold">Quiz Management</h2>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Quiz
+                </Button>
+              </div>
+
+              <div className="grid gap-6">
+                {quizzes.map((quiz) => (
+                  <Card key={quiz.id} className="border-emerald-100">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{quiz.title}</CardTitle>
+                          <CardDescription>
+                            {quiz.subject} • {quiz.duration} minutes • {quiz.questions} questions
+                          </CardDescription>
+                        </div>
+                        <Badge variant="secondary">{quiz.status}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-emerald-600">{quiz.completed}</div>
+                            <p className="text-sm text-gray-600">Completed</p>
                           </div>
-                          <p className="text-sm text-gray-600">Submissions</p>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">{quiz.averageScore}%</div>
+                            <p className="text-sm text-gray-600">Average Score</p>
+                          </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{assignment.avgGrade}%</div>
-                          <p className="text-sm text-gray-600">Avg Grade</p>
-                        </div>
-                        <div className="text-center">
-                          <Progress
-                            value={(assignment.submissions / assignment.totalStudents) * 100}
-                            className="mt-2"
-                          />
+                          <Progress value={64} className="mt-2" />
                           <p className="text-sm text-gray-600 mt-1">Completion Rate</p>
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleViewResults(quiz.id)}>
                           <Eye className="w-4 h-4 mr-2" />
-                          View Details
+                          View Results
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(quiz.id)}>
                           <Edit className="w-4 h-4 mr-2" />
-                          Edit
+                          Edit Quiz
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleExportResults(quiz.id)}>
                           <Download className="w-4 h-4 mr-2" />
                           Export Results
                         </Button>
@@ -617,187 +756,102 @@ export default function TeacherDashboard() {
                   </Card>
                 ))}
               </div>
-            </div>
-          )}
 
-          {activeTab === "quizzes" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Quizzes</h2>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Quiz
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              {viewResultsModal && (
+                <Dialog open={!!viewResultsModal} onOpenChange={() => setViewResultsModal(null)}>
+                  <DialogContent className="max-w-4xl">
                     <DialogHeader>
-                      <DialogTitle>Create New Quiz</DialogTitle>
-                      <DialogDescription>
-                        Build a quiz with multiple choice questions for your students.
-                      </DialogDescription>
+                      <DialogTitle>Quiz Results</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="quizTitle">Quiz Title</Label>
-                          <Input
-                            id="quizTitle"
-                            value={quizForm.title}
-                            onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })}
-                            placeholder="e.g., History Quiz - WWII"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="quizSubject">Subject</Label>
-                          <Select
-                            value={quizForm.subject}
-                            onValueChange={(value) => setQuizForm({ ...quizForm, subject: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select subject" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mathematics">Mathematics</SelectItem>
-                              <SelectItem value="english">English</SelectItem>
-                              <SelectItem value="science">Science</SelectItem>
-                              <SelectItem value="history">History</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="duration">Duration (minutes)</Label>
-                          <Input
-                            id="duration"
-                            type="number"
-                            value={quizForm.duration}
-                            onChange={(e) => setQuizForm({ ...quizForm, duration: e.target.value })}
-                            placeholder="30"
-                          />
-                        </div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-emerald-600">16</div>
+                            <p className="text-sm text-gray-600">Students Completed</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-blue-600">78%</div>
+                            <p className="text-sm text-gray-600">Average Score</p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4 text-center">
+                            <div className="text-2xl font-bold text-purple-600">12</div>
+                            <p className="text-sm text-gray-600">Above 80%</p>
+                          </CardContent>
+                        </Card>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-medium">Questions</h3>
-                          <Button onClick={addQuizQuestion} variant="outline" size="sm">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Question
-                          </Button>
-                        </div>
-
-                        {quizForm.questions.map((question, index) => (
-                          <Card key={index} className="border-blue-100">
-                            <CardHeader>
-                              <CardTitle className="text-base">Question {index + 1}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                              <div>
-                                <Label>Question Text</Label>
-                                <Textarea
-                                  value={question.question}
-                                  onChange={(e) => updateQuizQuestion(index, "question", e.target.value)}
-                                  placeholder="Enter your question here..."
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                {question.options.map((option, optionIndex) => (
-                                  <div key={optionIndex} className="flex items-center space-x-2">
-                                    <input
-                                      type="radio"
-                                      name={`correct-${index}`}
-                                      checked={question.correct === optionIndex}
-                                      onChange={() => updateQuizQuestion(index, "correct", optionIndex)}
-                                      className="text-blue-600"
-                                    />
-                                    <Input
-                                      value={option}
-                                      onChange={(e) =>
-                                        updateQuizQuestion(index, `option-${optionIndex}`, e.target.value)
-                                      }
-                                      placeholder={`Option ${optionIndex + 1}`}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline">Cancel</Button>
-                        <Button onClick={createQuiz} className="bg-blue-600 hover:bg-blue-700">
-                          Create Quiz
-                        </Button>
+                      <div className="border rounded-lg">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="p-3 text-left">Student Name</th>
+                              <th className="p-3 text-left">Score</th>
+                              <th className="p-3 text-left">Correct Answers</th>
+                              <th className="p-3 text-left">Incorrect Questions</th>
+                              <th className="p-3 text-left">Time Taken</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { name: "John Doe", score: 85, correct: 17, incorrect: "Q3, Q7, Q12", time: "28 min" },
+                              { name: "Jane Smith", score: 92, incorrect: "Q5, Q14", correct: 18, time: "25 min" },
+                              {
+                                name: "Mike Johnson",
+                                score: 78,
+                                correct: 15,
+                                incorrect: "Q2, Q8, Q11, Q16, Q19",
+                                time: "30 min",
+                              },
+                              {
+                                name: "Sarah Wilson",
+                                score: 88,
+                                correct: 17,
+                                incorrect: "Q4, Q9, Q15",
+                                time: "27 min",
+                              },
+                            ].map((student, index) => (
+                              <tr key={index} className="border-t">
+                                <td className="p-3 font-medium">{student.name}</td>
+                                <td className="p-3">
+                                  <Badge variant={student.score >= 80 ? "default" : "secondary"}>
+                                    {student.score}%
+                                  </Badge>
+                                </td>
+                                <td className="p-3">{student.correct}/20</td>
+                                <td className="p-3 text-sm text-red-600">{student.incorrect}</td>
+                                <td className="p-3">{student.time}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </DialogContent>
                 </Dialog>
-              </div>
-
-              <div className="grid gap-6">
-                <Card className="border-blue-100">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">History Quiz - World War II</CardTitle>
-                        <CardDescription>History • 30 minutes • 15 questions</CardDescription>
-                      </div>
-                      <Badge>Active</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-3 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">18/28</div>
-                        <p className="text-sm text-gray-600">Completed</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">82%</div>
-                        <p className="text-sm text-gray-600">Avg Score</p>
-                      </div>
-                      <div className="text-center">
-                        <Progress value={64} className="mt-2" />
-                        <p className="text-sm text-gray-600 mt-1">Completion Rate</p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Results
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Quiz
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="w-4 h-4 mr-2" />
-                        Export Results
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              )}
             </div>
           )}
 
           {activeTab === "students" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Students</h2>
+                <h2 className="text-xl font-bold">Student Management</h2>
                 <Input placeholder="Search students..." className="max-w-sm" />
               </div>
 
               <div className="grid gap-4">
                 {students.map((student) => (
                   <Card key={student.id} className="border-green-100">
-                    <CardContent className="p-6">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <Avatar>
-                            <AvatarImage src="/placeholder.svg?height=50&width=50" />
+                            <AvatarImage src={`/placeholder-pihzm.png?key=0u5w2&key=4eefw&height=40&width=40`} />
                             <AvatarFallback className="bg-green-100 text-green-600">
                               {student.name
                                 .split(" ")
@@ -806,33 +860,18 @@ export default function TeacherDashboard() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-medium">{student.name}</h3>
-                            <p className="text-sm text-gray-600">{student.email}</p>
-                            <p className="text-sm text-gray-500">{student.class}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-8 text-center">
-                          <div>
-                            <div className="text-lg font-bold text-blue-600">{student.grade}%</div>
-                            <p className="text-xs text-gray-600">Grade</p>
-                          </div>
-                          <div>
-                            <div className="text-lg font-bold text-green-600">{student.attendance}%</div>
-                            <p className="text-xs text-gray-600">Attendance</p>
-                          </div>
-                          <div>
-                            <div className="text-lg font-bold text-purple-600">
-                              {student.assignments.submitted}/{student.assignments.total}
-                            </div>
-                            <p className="text-xs text-gray-600">Assignments</p>
+                            <h4 className="font-medium">{student.name}</h4>
+                            <p className="text-sm text-gray-600">
+                              {student.class} • GPA: {student.gpa} • Attendance: {student.attendance}%
+                            </p>
                           </div>
                         </div>
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleViewProfile(student.id)}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Profile
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleMessage(student.id)}>
                             <MessageSquare className="w-4 h-4 mr-2" />
                             Message
                           </Button>
@@ -842,6 +881,122 @@ export default function TeacherDashboard() {
                   </Card>
                 ))}
               </div>
+
+              {viewProfileModal && (
+                <Dialog open={!!viewProfileModal} onOpenChange={() => setViewProfileModal(null)}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Student Profile</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-6">
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="w-20 h-20">
+                          <AvatarImage src="/placeholder.svg?height=80&width=80" />
+                          <AvatarFallback className="bg-green-100 text-green-600 text-xl">JD</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <h3 className="text-xl font-bold">John Doe</h3>
+                          <p className="text-gray-600">Grade 10-A • Student ID: SA2024001</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-6">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-sm">Academic Performance</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="flex justify-between">
+                              <span>Overall GPA</span>
+                              <span className="font-bold">3.8</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Mathematics</span>
+                              <span>A-</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>English</span>
+                              <span>B+</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Science</span>
+                              <span>A</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-sm">Attendance & Behavior</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="flex justify-between">
+                              <span>Attendance Rate</span>
+                              <span className="font-bold">95%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Late Days</span>
+                              <span>2</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Assignments Submitted</span>
+                              <span>18/20</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Behavior Score</span>
+                              <span className="text-green-600">Excellent</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+
+              {messageModal && (
+                <Dialog open={!!messageModal} onOpenChange={() => setMessageModal(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Send Message to Student</DialogTitle>
+                    </DialogHeader>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        const formData = new FormData(e.target as HTMLFormElement)
+                        const message = formData.get("message") as string
+                        sendMessage(messageModal, message)
+                      }}
+                    >
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="subject">Subject</Label>
+                          <Input id="subject" name="subject" placeholder="Enter message subject" required />
+                        </div>
+                        <div>
+                          <Label htmlFor="message">Message</Label>
+                          <textarea
+                            id="message"
+                            name="message"
+                            className="w-full p-2 border rounded-md"
+                            rows={4}
+                            placeholder="Type your message here..."
+                            required
+                          />
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                            Send Message
+                          </Button>
+                          <Button type="button" variant="outline" onClick={() => setMessageModal(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           )}
 
@@ -979,7 +1134,7 @@ export default function TeacherDashboard() {
                           <Label htmlFor="noteSubject">Subject</Label>
                           <Select
                             value={noteForm.subject}
-                            onValueChange={(value) => setNoteForm({ ...noteForm, subject: value })}
+                            onChange={(value) => setNoteForm({ ...noteForm, subject: value })}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select subject" />
@@ -1065,7 +1220,7 @@ export default function TeacherDashboard() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold">Attendance</h2>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleMarkAttendance}>
                   <Plus className="w-4 h-4 mr-2" />
                   Mark Attendance
                 </Button>
@@ -1077,7 +1232,7 @@ export default function TeacherDashboard() {
                     <CardTitle>Recent Attendance</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {attendanceData.map((record, index) => (
+                    {attendanceDataOld.map((record, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <span className="font-medium">{record.date}</span>
                         <div className="flex space-x-4 text-sm">
@@ -1114,6 +1269,63 @@ export default function TeacherDashboard() {
                   </CardContent>
                 </Card>
               </div>
+
+              {attendanceModal && (
+                <Dialog open={attendanceModal} onOpenChange={() => setAttendanceModal(false)}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Mark Attendance - Grade 10-A</DialogTitle>
+                      <DialogDescription>Mark attendance for today's class</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid gap-3 max-h-96 overflow-y-auto">
+                        {students.slice(0, 8).map((student) => (
+                          <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center space-x-3">
+                              <Avatar>
+                                <AvatarFallback className="bg-green-100 text-green-600">
+                                  {student.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{student.name}</span>
+                            </div>
+                            <div className="flex space-x-2">
+                              {["Present", "Absent", "Late"].map((status) => (
+                                <button
+                                  key={status}
+                                  onClick={() => setAttendanceData({ ...attendanceData, [student.id]: status })}
+                                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                                    attendanceData[student.id] === status
+                                      ? status === "Present"
+                                        ? "bg-green-500 text-white"
+                                        : status === "Absent"
+                                          ? "bg-red-500 text-white"
+                                          : "bg-yellow-500 text-white"
+                                      : "bg-gray-100 hover:bg-gray-200"
+                                  }`}
+                                >
+                                  {status}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex space-x-2 pt-4">
+                        <Button onClick={submitAttendance} className="bg-green-600 hover:bg-green-700">
+                          Submit Attendance
+                        </Button>
+                        <Button variant="outline" onClick={() => setAttendanceModal(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           )}
 

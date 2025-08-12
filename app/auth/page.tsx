@@ -39,30 +39,70 @@ export default function AuthPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Simulate authentication
-    const userData = {
-      ...formData,
-      role,
-      id: Math.random().toString(36).substr(2, 9),
-    }
+    if (mode === "signin") {
+      // Sign-in logic - validate credentials
+      const existingUsers = JSON.parse(localStorage.getItem("safari_users") || "[]")
+      const user = existingUsers.find(
+        (u: any) => u.email === formData.email && u.password === formData.password && u.role === role,
+      )
 
-    // Store user data in localStorage for demo purposes
-    localStorage.setItem("safari_user", JSON.stringify(userData))
+      if (user) {
+        localStorage.setItem("safari_user", JSON.stringify(user))
+        // Redirect to appropriate dashboard
+        switch (role) {
+          case "student":
+            router.push("/dashboard/student")
+            break
+          case "teacher":
+            router.push("/dashboard/teacher")
+            break
+          case "parent":
+            router.push("/dashboard/parent")
+            break
+          case "admin":
+            router.push("/dashboard/admin")
+            break
+        }
+      } else {
+        alert("Invalid credentials. Please check your email, password, and role.")
+        return
+      }
+    } else {
+      // Sign-up logic - create new user
+      if (formData.password !== formData.confirmPassword) {
+        alert("Passwords do not match")
+        return
+      }
 
-    // Redirect to appropriate dashboard
-    switch (role) {
-      case "student":
-        router.push("/dashboard/student")
-        break
-      case "teacher":
-        router.push("/dashboard/teacher")
-        break
-      case "parent":
-        router.push("/dashboard/parent")
-        break
-      case "admin":
-        router.push("/dashboard/admin")
-        break
+      const userData = {
+        ...formData,
+        role,
+        id: Math.random().toString(36).substr(2, 9),
+        createdAt: new Date().toISOString(),
+        kycStatus: role === "student" ? "pending" : "not_required",
+      }
+
+      // Store user in users array
+      const existingUsers = JSON.parse(localStorage.getItem("safari_users") || "[]")
+      existingUsers.push(userData)
+      localStorage.setItem("safari_users", JSON.stringify(existingUsers))
+      localStorage.setItem("safari_user", JSON.stringify(userData))
+
+      // Redirect to appropriate dashboard
+      switch (role) {
+        case "student":
+          router.push("/dashboard/student")
+          break
+        case "teacher":
+          router.push("/dashboard/teacher")
+          break
+        case "parent":
+          router.push("/dashboard/parent")
+          break
+        case "admin":
+          router.push("/dashboard/admin")
+          break
+      }
     }
   }
 
@@ -74,24 +114,24 @@ export default function AuthPage() {
   }
 
   const roleColors = {
-    student: "blue",
+    student: "green",
     teacher: "green",
-    parent: "purple",
-    admin: "orange",
+    parent: "green",
+    admin: "green",
   }
 
   const RoleIcon = roleIcons[role]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center space-x-2 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-green-500 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-500 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
               Safari Academy
             </span>
           </Link>
@@ -101,7 +141,7 @@ export default function AuthPage() {
               variant={mode === "signin" ? "default" : "outline"}
               onClick={() => setMode("signin")}
               className={
-                mode === "signin" ? "bg-gradient-to-r from-blue-600 to-green-600" : "border-blue-200 text-blue-600"
+                mode === "signin" ? "bg-gradient-to-r from-green-600 to-emerald-600" : "border-green-200 text-green-600"
               }
             >
               Sign In
@@ -110,7 +150,7 @@ export default function AuthPage() {
               variant={mode === "signup" ? "default" : "outline"}
               onClick={() => setMode("signup")}
               className={
-                mode === "signup" ? "bg-gradient-to-r from-blue-600 to-green-600" : "border-blue-200 text-blue-600"
+                mode === "signup" ? "bg-gradient-to-r from-green-600 to-emerald-600" : "border-green-200 text-green-600"
               }
             >
               Sign Up
@@ -118,7 +158,7 @@ export default function AuthPage() {
           </div>
         </div>
 
-        <Card className="border-blue-100 shadow-lg">
+        <Card className="border-green-100 shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">{mode === "signin" ? "Welcome Back" : "Create Account"}</CardTitle>
             <CardDescription>
@@ -143,19 +183,13 @@ export default function AuthPage() {
                         type="button"
                         onClick={() => setRole(r)}
                         className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                          isSelected
-                            ? `border-${roleColors[r]}-500 bg-${roleColors[r]}-50`
-                            : "border-gray-200 hover:border-gray-300"
+                          isSelected ? "border-green-500 bg-green-50" : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
-                        <Icon
-                          className={`w-5 h-5 mx-auto mb-1 ${
-                            isSelected ? `text-${roleColors[r]}-600` : "text-gray-400"
-                          }`}
-                        />
+                        <Icon className={`w-5 h-5 mx-auto mb-1 ${isSelected ? "text-green-600" : "text-gray-400"}`} />
                         <span
                           className={`text-sm font-medium capitalize ${
-                            isSelected ? `text-${roleColors[r]}-700` : "text-gray-600"
+                            isSelected ? "text-green-700" : "text-gray-600"
                           }`}
                         >
                           {r}
@@ -283,31 +317,12 @@ export default function AuthPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
                 <RoleIcon className="w-4 h-4 mr-2" />
                 {mode === "signin" ? "Sign In" : "Create Account"} as {role.charAt(0).toUpperCase() + role.slice(1)}
               </Button>
             </form>
-
-            {/* Demo Accounts */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">Demo Accounts</h4>
-              <div className="space-y-1 text-sm text-blue-700">
-                <p>
-                  <strong>Student:</strong> student@demo.com / demo123
-                </p>
-                <p>
-                  <strong>Teacher:</strong> teacher@demo.com / demo123
-                </p>
-                <p>
-                  <strong>Parent:</strong> parent@demo.com / demo123
-                </p>
-                <p>
-                  <strong>Admin:</strong> admin@demo.com / demo123
-                </p>
-              </div>
-            </div>
 
             {/* Footer Links */}
             <div className="mt-6 text-center space-y-2">
@@ -316,7 +331,7 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-                  className="text-blue-600 hover:underline font-medium"
+                  className="text-green-600 hover:underline font-medium"
                 >
                   {mode === "signin" ? "Sign up" : "Sign in"}
                 </button>
