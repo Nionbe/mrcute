@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
-import { BookOpen, FileText, Clock, CalendarIcon, Award, Trophy, Shield, User, Bell } from "heroicons-react"
+import { BookOpen, FileText, Clock, Calendar, Award, Trophy, Shield, User, Bell } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
 const StudentDashboardPage = () => {
@@ -21,7 +20,7 @@ const StudentDashboardPage = () => {
             { id: "assignments", label: "Assignments", icon: FileText },
             { id: "quizzes", label: "Quizzes", icon: Clock },
             { id: "notes", label: "Notes", icon: BookOpen },
-            { id: "attendance", label: "Attendance", icon: CalendarIcon },
+            { id: "attendance", label: "Attendance", icon: Calendar },
             { id: "grades", label: "Grades", icon: Award },
             { id: "leaderboard", label: "Leaderboard", icon: Trophy },
             { id: "kyc", label: "KYC Verification", icon: Shield },
