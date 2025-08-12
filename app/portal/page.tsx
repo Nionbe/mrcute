@@ -1,10 +1,22 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   BookOpen,
   BarChart3,
@@ -14,10 +26,12 @@ import {
   Menu,
   X,
   Plus,
-  Search,
   FileText,
   Shield,
-  AlertCircle,
+  Upload,
+  CheckCircle,
+  Clock,
+  XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -25,6 +39,12 @@ export default function StudentPortal() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeTab, setActiveTab] = useState("notes")
   const [kycCompleted, setKycCompleted] = useState(false)
+  const [kycModalOpen, setKycModalOpen] = useState(false)
+  const [kycStatus, setKycStatus] = useState("pending") // pending, submitted, approved, rejected
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+  const [idNumber, setIdNumber] = useState("")
+  const [fullName, setFullName] = useState("")
+  const [address, setAddress] = useState("")
 
   const navigationItems = [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
@@ -33,7 +53,7 @@ export default function StudentPortal() {
     { id: "results", label: "Results", icon: BarChart3 },
     { id: "leaderboard", label: "Leaderboard", icon: Trophy },
     { id: "profile", label: "Profile", icon: User },
-    { id: "kyc", label: "KYC Verification", icon: Shield, disabled: !kycCompleted },
+    { id: "kyc", label: "KYC Verification", icon: Shield, disabled: false },
     { id: "notifications", label: "Notifications", icon: Bell },
   ]
 
@@ -41,17 +61,70 @@ export default function StudentPortal() {
     setSidebarOpen(!sidebarOpen)
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setUploadedImage(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleKycSubmit = () => {
+    if (uploadedImage && idNumber && fullName && address) {
+      setKycStatus("submitted")
+      setKycModalOpen(false)
+      // Simulate approval process
+      setTimeout(() => {
+        setKycStatus("approved")
+        setKycCompleted(true)
+      }, 3000)
+    }
+  }
+
+  const getKycStatusIcon = () => {
+    switch (kycStatus) {
+      case "pending":
+        return <Clock className="w-5 h-5 text-yellow-500" />
+      case "submitted":
+        return <Clock className="w-5 h-5 text-blue-500" />
+      case "approved":
+        return <CheckCircle className="w-5 h-5 text-green-500" />
+      case "rejected":
+        return <XCircle className="w-5 h-5 text-red-500" />
+      default:
+        return <Shield className="w-5 h-5 text-gray-500" />
+    }
+  }
+
+  const getKycStatusText = () => {
+    switch (kycStatus) {
+      case "pending":
+        return "Verification Required"
+      case "submitted":
+        return "Under Review"
+      case "approved":
+        return "Verified"
+      case "rejected":
+        return "Verification Failed"
+      default:
+        return "Not Started"
+    }
+  }
+
   return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex h-screen bg-gradient-to-br from-green-50 to-emerald-100">
       {/* Animated Sidebar */}
       <div
         className={cn(
-          "relative bg-gradient-to-b from-blue-600 to-blue-800 text-white transition-all duration-300 ease-in-out shadow-xl",
+          "relative bg-gradient-to-b from-green-600 to-green-800 text-white transition-all duration-300 ease-in-out shadow-xl",
           sidebarOpen ? "w-64" : "w-16",
         )}
       >
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-blue-500/30">
+        <div className="p-4 border-b border-green-500/30">
           <div className="flex items-center justify-between">
             <div
               className={cn(
@@ -73,7 +146,7 @@ export default function StudentPortal() {
               {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
           </div>
-          {sidebarOpen && <div className="mt-2 text-sm text-blue-200 animate-fade-in">Student Portal</div>}
+          {sidebarOpen && <div className="mt-2 text-sm text-green-200 animate-fade-in">Student Portal</div>}
         </div>
 
         {/* Navigation Items */}
@@ -93,8 +166,8 @@ export default function StudentPortal() {
                   isActive
                     ? "bg-white/20 text-white shadow-lg"
                     : isDisabled
-                      ? "text-blue-300 cursor-not-allowed opacity-60"
-                      : "text-blue-100 hover:bg-white/10 hover:text-white hover:translate-x-1",
+                      ? "text-green-300 cursor-not-allowed opacity-60"
+                      : "text-green-100 hover:bg-white/10 hover:text-white hover:translate-x-1",
                   !sidebarOpen && "justify-center",
                 )}
               >
@@ -113,13 +186,13 @@ export default function StudentPortal() {
                 >
                   {item.label}
                 </span>
-                {isDisabled && sidebarOpen && <AlertCircle className="w-4 h-4 ml-auto text-yellow-400" />}
+                {item.id === "kyc" && sidebarOpen && <div className="ml-auto">{getKycStatusIcon()}</div>}
 
                 {/* Tooltip for collapsed sidebar */}
                 {!sidebarOpen && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                     {item.label}
-                    {isDisabled && " (Complete KYC)"}
+                    {item.id === "kyc" && ` (${getKycStatusText()})`}
                   </div>
                 )}
               </button>
@@ -152,7 +225,7 @@ export default function StudentPortal() {
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                 Student
               </Badge>
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
               </div>
             </div>
@@ -165,7 +238,7 @@ export default function StudentPortal() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <Input placeholder="Search notes..." className="w-64" icon={<Search className="w-4 h-4" />} />
+                  <Input placeholder="Search notes..." className="w-64" />
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm">
                       All Notes
@@ -197,52 +270,201 @@ export default function StudentPortal() {
 
           {activeTab === "kyc" && (
             <div className="max-w-2xl mx-auto space-y-6">
-              <Card className="border-yellow-200 bg-yellow-50">
+              <Card
+                className={cn(
+                  "border-2",
+                  kycStatus === "pending" && "border-yellow-200 bg-yellow-50",
+                  kycStatus === "submitted" && "border-blue-200 bg-blue-50",
+                  kycStatus === "approved" && "border-green-200 bg-green-50",
+                  kycStatus === "rejected" && "border-red-200 bg-red-50",
+                )}
+              >
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-yellow-800">
-                    <Shield className="w-5 h-5" />
-                    <span>KYC Verification Required</span>
+                  <CardTitle
+                    className={cn(
+                      "flex items-center space-x-2",
+                      kycStatus === "pending" && "text-yellow-800",
+                      kycStatus === "submitted" && "text-blue-800",
+                      kycStatus === "approved" && "text-green-800",
+                      kycStatus === "rejected" && "text-red-800",
+                    )}
+                  >
+                    {getKycStatusIcon()}
+                    <span>KYC {getKycStatusText()}</span>
                   </CardTitle>
-                  <CardDescription className="text-yellow-700">
-                    Complete your identity verification to access all platform features
+                  <CardDescription
+                    className={cn(
+                      kycStatus === "pending" && "text-yellow-700",
+                      kycStatus === "submitted" && "text-blue-700",
+                      kycStatus === "approved" && "text-green-700",
+                      kycStatus === "rejected" && "text-red-700",
+                    )}
+                  >
+                    {kycStatus === "pending" && "Complete your identity verification to access all platform features"}
+                    {kycStatus === "submitted" && "Your documents are being reviewed by our team"}
+                    {kycStatus === "approved" && "Your identity has been successfully verified"}
+                    {kycStatus === "rejected" &&
+                      "Your verification was rejected. Please resubmit with correct documents"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-white rounded-lg border">
-                      <FileText className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <FileText className="w-8 h-8 mx-auto mb-2 text-green-600" />
                       <h4 className="font-medium">Personal Info</h4>
                       <p className="text-sm text-gray-600">Basic details</p>
                     </div>
                     <div className="text-center p-4 bg-white rounded-lg border">
-                      <User className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <User className="w-8 h-8 mx-auto mb-2 text-green-600" />
                       <h4 className="font-medium">Identity Proof</h4>
                       <p className="text-sm text-gray-600">Upload documents</p>
                     </div>
                     <div className="text-center p-4 bg-white rounded-lg border">
-                      <Shield className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <Shield className="w-8 h-8 mx-auto mb-2 text-green-600" />
                       <h4 className="font-medium">Verification</h4>
                       <p className="text-sm text-gray-600">Final review</p>
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-lg border">
-                    <h4 className="font-medium mb-4">Required Documents</h4>
-                    <ul className="space-y-2 text-sm text-gray-600">
-                      <li>• Government-issued photo ID (passport, driver's license, or national ID)</li>
-                      <li>• Proof of address (utility bill or bank statement, not older than 3 months)</li>
-                      <li>• Student enrollment verification</li>
-                    </ul>
-                  </div>
+                  {kycStatus === "approved" ? (
+                    <div className="bg-green-100 p-6 rounded-lg border border-green-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <h4 className="font-medium text-green-800">Verification Complete</h4>
+                      </div>
+                      <p className="text-green-700">
+                        Your identity has been successfully verified. You now have full access to all platform features.
+                      </p>
+                    </div>
+                  ) : (
+                    <Dialog open={kycModalOpen} onOpenChange={setKycModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          className={cn(
+                            "w-full",
+                            kycStatus === "pending" && "bg-green-600 hover:bg-green-700",
+                            kycStatus === "submitted" && "bg-blue-600 hover:bg-blue-700",
+                            kycStatus === "rejected" && "bg-red-600 hover:bg-red-700",
+                          )}
+                          disabled={kycStatus === "submitted"}
+                        >
+                          {kycStatus === "pending" && (
+                            <>
+                              <Shield className="w-4 h-4 mr-2" />
+                              Start KYC Verification
+                            </>
+                          )}
+                          {kycStatus === "submitted" && (
+                            <>
+                              <Clock className="w-4 h-4 mr-2" />
+                              Under Review
+                            </>
+                          )}
+                          {kycStatus === "rejected" && (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Resubmit Documents
+                            </>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>KYC Verification</DialogTitle>
+                          <DialogDescription>
+                            Please provide your personal information and upload a clear photo of your government-issued
+                            ID
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="fullName">Full Name (as on ID)</Label>
+                              <Input
+                                id="fullName"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                placeholder="Enter your full name"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="idNumber">ID Number</Label>
+                              <Input
+                                id="idNumber"
+                                value={idNumber}
+                                onChange={(e) => setIdNumber(e.target.value)}
+                                placeholder="Enter your ID number"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="address">Address</Label>
+                              <Textarea
+                                id="address"
+                                value={address}
+                                onChange={(e) => setAddress(e.target.value)}
+                                placeholder="Enter your full address"
+                                rows={3}
+                              />
+                            </div>
+                          </div>
 
-                  <Button disabled className="w-full bg-gray-400 cursor-not-allowed">
-                    <AlertCircle className="w-4 h-4 mr-2" />
-                    Complete Registration First
-                  </Button>
+                          <div className="space-y-4">
+                            <Label>Upload ID Document</Label>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                              {uploadedImage ? (
+                                <div className="space-y-4">
+                                  <img
+                                    src={uploadedImage || "/placeholder.svg"}
+                                    alt="Uploaded ID"
+                                    className="max-w-full h-48 object-contain mx-auto rounded-lg"
+                                  />
+                                  <div className="flex justify-center">
+                                    <Button variant="outline" onClick={() => setUploadedImage(null)}>
+                                      Remove Image
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center">
+                                  <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                                  <div className="space-y-2">
+                                    <p className="text-sm text-gray-600">
+                                      Click to upload or drag and drop your ID document
+                                    </p>
+                                    <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+                                  </div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                  <p className="text-sm text-gray-600 text-center">
-                    KYC verification will be available after you complete your account registration
-                  </p>
+                          <div className="bg-blue-50 p-4 rounded-lg">
+                            <h4 className="font-medium text-blue-800 mb-2">Requirements:</h4>
+                            <ul className="text-sm text-blue-700 space-y-1">
+                              <li>• Clear, high-quality photo of your government-issued ID</li>
+                              <li>• All text must be clearly readable</li>
+                              <li>• ID must be valid and not expired</li>
+                              <li>• Name on ID must match the name provided above</li>
+                            </ul>
+                          </div>
+
+                          <Button
+                            onClick={handleKycSubmit}
+                            disabled={!uploadedImage || !idNumber || !fullName || !address}
+                            className="w-full bg-green-600 hover:bg-green-700"
+                          >
+                            Submit for Verification
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -255,7 +477,7 @@ export default function StudentPortal() {
                   <CardTitle>Study Progress</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-blue-600">75%</div>
+                  <div className="text-3xl font-bold text-green-600">75%</div>
                   <p className="text-gray-600">Course completion</p>
                 </CardContent>
               </Card>
@@ -275,7 +497,7 @@ export default function StudentPortal() {
                   <CardTitle>Rank</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-purple-600">#12</div>
+                  <div className="text-3xl font-bold text-green-600">#12</div>
                   <p className="text-gray-600">Out of 150 students</p>
                 </CardContent>
               </Card>
