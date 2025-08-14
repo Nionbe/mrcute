@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Book, Search, Tag } from "lucide-react"
+import { Book, Search, Tag, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -100,10 +100,12 @@ export default function NotesPage() {
           <h1 className="text-2xl font-bold text-gray-900">My Notes</h1>
           <p className="text-gray-500">Access and manage your study notes</p>
         </div>
-        <Button className="mt-4 bg-green-600 hover:bg-green-700 md:mt-0">
-          <Book className="mr-2 h-4 w-4" />
-          <Link href="/student/notes/create">Create New Note</Link>
-        </Button>
+        <Link href="/student/notes/create">
+          <Button className="mt-4 bg-green-600 hover:bg-green-700 md:mt-0">
+            <Plus className="mr-2 h-4 w-4" />
+            Create New Note
+          </Button>
+        </Link>
       </div>
 
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -140,9 +142,12 @@ export default function NotesPage() {
                   : "Start by creating your first note"}
           </p>
           {!searchQuery && activeTab !== "class" && (
-            <Button className="mt-4 bg-green-600 hover:bg-green-700">
-              <Link href="/student/notes/create">Create Note</Link>
-            </Button>
+            <Link href="/student/notes/create">
+              <Button className="mt-4 bg-green-600 hover:bg-green-700">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Note
+              </Button>
+            </Link>
           )}
         </div>
       ) : (

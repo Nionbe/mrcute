@@ -2,34 +2,37 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { User, TrendingUp, Clock, Award, FileText, CreditCard, Bell } from "lucide-react"
+import { User, TrendingUp, Clock, Award, FileText, Bell, LogOut } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { NotificationBell } from "@/components/notification-bell"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/use-toast"
 
 export default function ParentDashboard() {
+  const router = useRouter()
   const [notifications, setNotifications] = useState([
     {
       id: "1",
-      title: "Payment Due",
-      message: "Monthly tuition payment is due in 3 days.",
-      time: "5 minutes ago",
-      read: false,
-    },
-    {
-      id: "2",
       title: "Quiz Result",
       message: "Your child scored 92% on the Mathematics quiz.",
       time: "1 hour ago",
       read: false,
     },
     {
-      id: "3",
+      id: "2",
       title: "Parent Meeting",
       message: "Parent-teacher meeting scheduled for next week.",
       time: "3 hours ago",
+      read: true,
+    },
+    {
+      id: "3",
+      title: "Progress Update",
+      message: "Your child has improved in Science this month.",
+      time: "1 day ago",
       read: true,
     },
   ])
@@ -48,15 +51,12 @@ export default function ParentDashboard() {
     name: "Loading...",
     childName: "Loading...",
     childGrade: "Loading...",
-    parentId: "Loading...",
     email: "loading@example.com",
   })
 
   useEffect(() => {
-    // Get user info from localStorage
     const userName = localStorage.getItem("userName") || "Parent"
     const userData = localStorage.getItem("userData")
-    const userId = localStorage.getItem("userId") || "PR000001"
     const userEmail = localStorage.getItem("userEmail") || "parent@example.com"
 
     let childName = "Alex Demo"
@@ -71,10 +71,18 @@ export default function ParentDashboard() {
       name: userName,
       childName: childName,
       childGrade: childGrade,
-      parentId: userId,
       email: userEmail,
     })
   }, [])
+
+  const handleLogout = () => {
+    localStorage.clear()
+    toast({
+      title: "Logged out successfully",
+      description: "You have been logged out of your account.",
+    })
+    router.push("/")
+  }
 
   const stats = [
     { title: "Child's Avg Score", value: "87%", icon: TrendingUp, change: "+5% this month" },
@@ -113,23 +121,6 @@ export default function ParentDashboard() {
     },
   ]
 
-  const upcomingPayments = [
-    {
-      id: "1",
-      description: "Monthly Tuition Fee",
-      amount: "350 ETB",
-      dueDate: "Apr 15, 2025",
-      status: "Due Soon",
-    },
-    {
-      id: "2",
-      description: "Lab Fee",
-      amount: "50 ETB",
-      dueDate: "Apr 20, 2025",
-      status: "Upcoming",
-    },
-  ]
-
   const subjectProgress = [
     { subject: "Mathematics", progress: 85, grade: "A-" },
     { subject: "Physics", progress: 78, grade: "B+" },
@@ -140,40 +131,51 @@ export default function ParentDashboard() {
 
   return (
     <div className="w-full">
-      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
-        <div className="flex items-center">
-          <h1 className="text-lg font-bold md:text-xl">Welcome back, {parentInfo.name}!</h1>
-          <div className="ml-4 flex items-center rounded-full bg-purple-100 px-3 py-1">
-            <span className="text-sm font-medium text-purple-600">
+      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-2 sm:px-4 md:px-6">
+        <div className="flex items-center min-w-0 flex-1">
+          <h1 className="text-sm sm:text-lg font-bold md:text-xl truncate">
+            Welcome back, <span className="text-purple-600">{parentInfo.name}</span>!
+          </h1>
+          <div className="ml-2 sm:ml-4 flex items-center rounded-full bg-purple-100 px-2 sm:px-3 py-1">
+            <span className="text-xs sm:text-sm font-medium text-purple-600 truncate">
               {parentInfo.childName} - Grade {parentInfo.childGrade}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <NotificationBell notifications={notifications} onMarkAsRead={markAsRead} onMarkAllAsRead={markAllAsRead} />
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="flex items-center gap-1 text-xs sm:text-sm bg-transparent"
+          >
+            <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
+          <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-purple-100 text-purple-600 text-xs sm:text-sm">
             {parentInfo.name.charAt(0)}
           </div>
         </div>
       </header>
 
-      <div className="p-4 md:p-6">
-        <div className="mb-6">
+      <div className="p-2 sm:p-4 md:p-6">
+        <div className="mb-4 sm:mb-6">
           <Card className="border-2 border-purple-200 bg-purple-50">
-            <CardContent className="flex flex-col items-center justify-between p-6 sm:flex-row">
+            <CardContent className="flex flex-col items-center justify-between p-3 sm:p-6 sm:flex-row">
               <div className="flex items-center">
-                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
-                  <User className="h-6 w-6" />
+                <div className="mr-3 sm:mr-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-purple-100 text-purple-600">
+                  <User className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold">{parentInfo.name}</h2>
-                  <p className="text-gray-600">Parent of {parentInfo.childName}</p>
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold truncate">{parentInfo.name}</h2>
+                  <p className="text-sm sm:text-base text-gray-600 truncate">Parent of {parentInfo.childName}</p>
                 </div>
               </div>
-              <div className="mt-4 rounded-lg border border-purple-200 bg-white p-3 sm:mt-0">
-                <p className="text-sm text-gray-500">Parent ID</p>
-                <p className="text-xl font-bold text-purple-600">{parentInfo.parentId}</p>
-                <p className="text-xs text-gray-400">
+              <div className="mt-3 sm:mt-0 rounded-lg border border-purple-200 bg-white p-3">
+                <p className="text-xs sm:text-sm text-gray-500">Child Info</p>
+                <p className="text-sm sm:text-lg font-bold text-purple-600 truncate">{parentInfo.childName}</p>
+                <p className="text-xs text-gray-400 truncate">
                   Grade {parentInfo.childGrade} • {parentInfo.email}
                 </p>
               </div>
@@ -181,80 +183,95 @@ export default function ParentDashboard() {
           </Card>
         </div>
 
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-4 sm:mb-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
           {stats.map((stat) => (
             <Card key={stat.title}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-gray-500">{stat.title}</CardTitle>
-                  <stat.icon className="h-4 w-4 text-gray-500" />
+                  <CardTitle className="text-xs sm:text-sm font-medium text-gray-500 truncate">{stat.title}</CardTitle>
+                  <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="flex items-center text-xs text-purple-600">{stat.change}</p>
+                <div className="text-lg sm:text-2xl font-bold">{stat.value}</div>
+                <p className="flex items-center text-xs text-purple-600 truncate">{stat.change}</p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <div className="mb-6 grid gap-6 md:grid-cols-2">
+        <div className="mb-4 sm:mb-6 grid gap-4 sm:gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Quick Actions</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-2 grid-cols-2">
                 <Link href="/parent/progress">
-                  <Button className="w-full justify-start bg-purple-600 hover:bg-purple-700">
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    View Progress
-                  </Button>
-                </Link>
-                <Link href="/parent/payments">
-                  <Button className="w-full justify-start bg-purple-600 hover:bg-purple-700">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Make Payment
+                  <Button className="w-full justify-start bg-purple-600 hover:bg-purple-700 text-xs sm:text-sm p-2 sm:p-3">
+                    <TrendingUp className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">View Progress</span>
                   </Button>
                 </Link>
                 <Link href="/parent/leaderboard">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    <Award className="mr-2 h-4 w-4" />
-                    Leaderboard
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-transparent text-xs sm:text-sm p-2 sm:p-3"
+                  >
+                    <Award className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Leaderboard</span>
                   </Button>
                 </Link>
                 <Link href="/parent/notifications">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Notifications
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-transparent text-xs sm:text-sm p-2 sm:p-3"
+                  >
+                    <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">Notifications</span>
                   </Button>
                 </Link>
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="w-full justify-start bg-transparent text-xs sm:text-sm p-2 sm:p-3"
+                >
+                  <LogOut className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="truncate">Logout</span>
+                </Button>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Subject Progress</CardTitle>
-              <CardDescription>{parentInfo.childName}'s performance by subject</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Subject Progress</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {parentInfo.childName}'s performance by subject
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {subjectProgress.slice(0, 4).map((subject) => (
                   <div key={subject.subject} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{subject.subject}</span>
+                      <span className="text-xs sm:text-sm font-medium truncate">{subject.subject}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">{subject.progress}%</span>
-                        <Badge variant="outline">{subject.grade}</Badge>
+                        <span className="text-xs sm:text-sm text-gray-500">{subject.progress}%</span>
+                        <Badge variant="outline" className="text-xs">
+                          {subject.grade}
+                        </Badge>
                       </div>
                     </div>
-                    <Progress value={subject.progress} className="h-2" />
+                    <Progress value={subject.progress} className="h-1.5 sm:h-2" />
                   </div>
                 ))}
-                <Link href="/parent/progress" className="block text-center text-sm text-purple-600 hover:underline">
+                <Link
+                  href="/parent/progress"
+                  className="block text-center text-xs sm:text-sm text-purple-600 hover:underline"
+                >
                   View Detailed Progress
                 </Link>
               </div>
@@ -262,35 +279,40 @@ export default function ParentDashboard() {
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Quiz Results</CardTitle>
-              <CardDescription>{parentInfo.childName}'s latest quiz performances</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Recent Quiz Results</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {parentInfo.childName}'s latest quiz performances
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {recentResults.map((result) => (
-                  <div key={result.id} className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                      <h4 className="font-medium">{result.quiz}</h4>
-                      <p className="text-sm text-gray-500">{result.subject}</p>
-                      <p className="text-sm text-gray-500">{result.date}</p>
+                  <div key={result.id} className="flex items-center justify-between rounded-lg border p-3 sm:p-4">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-medium text-sm sm:text-base truncate">{result.quiz}</h4>
+                      <p className="text-xs sm:text-sm text-gray-500 truncate">{result.subject}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">{result.date}</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-bold">
+                      <span className="text-sm sm:text-lg font-bold">
                         {result.score}/{result.maxScore}
                       </span>
                       <Badge
                         variant={result.score >= 90 ? "default" : result.score >= 80 ? "secondary" : "outline"}
-                        className="ml-2"
+                        className="ml-2 text-xs"
                       >
                         {result.grade}
                       </Badge>
                     </div>
                   </div>
                 ))}
-                <Link href="/parent/progress" className="block text-center text-sm text-purple-600 hover:underline">
+                <Link
+                  href="/parent/progress"
+                  className="block text-center text-xs sm:text-sm text-purple-600 hover:underline"
+                >
                   View All Results
                 </Link>
               </div>
@@ -299,30 +321,49 @@ export default function ParentDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Payment Status</CardTitle>
-              <CardDescription>Upcoming payments and fees</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Academic Progress</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Subject performance overview</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {upcomingPayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                      <h4 className="font-medium">{payment.description}</h4>
-                      <p className="text-sm text-gray-500">Due: {payment.dueDate}</p>
+              <div className="space-y-3 sm:space-y-4">
+                {["Mathematics", "Science", "English", "History"].map((subject) => (
+                  <div key={subject}>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-medium truncate">{subject}</span>
+                      <span className="text-xs sm:text-sm font-medium">
+                        {subject === "Mathematics"
+                          ? "85%"
+                          : subject === "Science"
+                            ? "78%"
+                            : subject === "English"
+                              ? "92%"
+                              : "70%"}
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-lg font-bold">{payment.amount}</span>
-                      <Badge
-                        variant={payment.status === "Due Soon" ? "destructive" : "outline"}
-                        className="ml-2 block mt-1"
-                      >
-                        {payment.status}
-                      </Badge>
+                    <div className="h-1.5 sm:h-2 w-full rounded-full bg-gray-100">
+                      <div
+                        className="h-1.5 sm:h-2 rounded-full bg-purple-600"
+                        style={{
+                          width: `${
+                            subject === "Mathematics"
+                              ? "85%"
+                              : subject === "Science"
+                                ? "78%"
+                                : subject === "English"
+                                  ? "92%"
+                                  : "70%"
+                          }`,
+                        }}
+                      ></div>
                     </div>
                   </div>
                 ))}
-                <Link href="/parent/payments" className="block text-center text-sm text-purple-600 hover:underline">
-                  View Payment History
+              </div>
+              <div className="mt-4">
+                <Link href="/parent/progress">
+                  <Button variant="outline" size="sm" className="w-full bg-transparent text-xs sm:text-sm">
+                    View Detailed Progress
+                  </Button>
                 </Link>
               </div>
             </CardContent>

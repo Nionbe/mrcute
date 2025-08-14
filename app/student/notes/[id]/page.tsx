@@ -1,190 +1,133 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Bookmark, BookmarkCheck, Share, Printer, Download } from "lucide-react"
+import { useRouter, useParams } from "next/navigation"
+import { ArrowLeft, Edit, Trash2, BookOpen, Tag, Calendar, User } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
-import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "@/components/ui/use-toast"
-import { useRouter } from "next/navigation"
 
-export default function NotePage({ params }: { params: { id: string } }) {
+interface Note {
+  id: string
+  title: string
+  content: string
+  subject: string
+  grade: string
+  createdAt: string
+  createdBy?: string
+  teacherName?: string
+  studentName?: string
+}
+
+export default function NoteDetailPage() {
   const router = useRouter()
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [note, setNote] = useState<any>(null)
+  const params = useParams()
+  const [note, setNote] = useState<Note | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Load note data on component mount
   useEffect(() => {
+    if (!params.id) return
+
     const loadNote = () => {
-      // First check if this is a teacher note
-      const teacherNotes = JSON.parse(localStorage.getItem("teacherNotes") || "[]")
-      const teacherNote = teacherNotes.find((n: any) => n.id === params.id)
+      try {
+        // Load student's personal notes
+        const storedNotes = localStorage.getItem("studentNotes")
+        let personalNotes: Note[] = []
 
-      if (teacherNote) {
-        console.log("Found teacher note:", teacherNote)
-        setNote({
-          id: teacherNote.id,
-          title: teacherNote.title,
-          subject: teacherNote.subject,
-          grade: teacherNote.grade,
-          date: teacherNote.date,
-          teacher: teacherNote.teacher || "Teacher",
-          content: teacherNote.content,
+        if (storedNotes) {
+          personalNotes = JSON.parse(storedNotes)
+        }
+
+        // Load teacher's notes
+        const teacherNotes = localStorage.getItem("teacherNotes")
+        let classNotes: Note[] = []
+
+        if (teacherNotes) {
+          classNotes = JSON.parse(teacherNotes)
+        }
+
+        // Combine both types of notes
+        const allNotes = [...personalNotes, ...classNotes]
+        const foundNote = allNotes.find((n) => n.id === params.id)
+
+        if (foundNote) {
+          setNote(foundNote)
+        } else {
+          toast({
+            title: "Note not found",
+            description: "The requested note could not be found.",
+            variant: "destructive",
+          })
+          router.push("/student/notes")
+        }
+      } catch (error) {
+        console.error("Error loading note:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load the note.",
+          variant: "destructive",
         })
+        router.push("/student/notes")
+      } finally {
         setLoading(false)
-        return
       }
-
-      // If not found in teacher notes, check student notes
-      const studentNotes = JSON.parse(localStorage.getItem("studentNotes") || "[]")
-      const studentNote = studentNotes.find((n: any) => n.id === params.id)
-
-      if (studentNote) {
-        console.log("Found student note:", studentNote)
-        setNote({
-          id: studentNote.id,
-          title: studentNote.title,
-          subject: studentNote.subject,
-          grade: studentNote.grade,
-          date: studentNote.date,
-          teacher: "Personal Note",
-          content: studentNote.content,
-        })
-        setLoading(false)
-        return
-      }
-
-      // If we still don't have a note, use default data
-      console.log("Note not found, using default data")
-      setNote({
-        id: params.id,
-        title: "World War II Overview",
-        subject: "History",
-        grade: "10",
-        date: "Apr 10, 2025",
-        teacher: "Mr. Thompson",
-        content: `
-          <h2>World War II (1939-1945)</h2>
-          
-          <p>World War II was a global war that lasted from 1939 to 1945. It involved the vast majority of the world's countries—including all of the great powers—forming two opposing military alliances: the Allies and the Axis.</p>
-          
-          <h3>Key Events:</h3>
-          
-          <ul>
-            <li><strong>September 1, 1939</strong>: Germany invades Poland, marking the beginning of World War II in Europe.</li>
-            <li><strong>December 7, 1941</strong>: Japan attacks Pearl Harbor, leading to the United States' entry into the war.</li>
-            <li><strong>June 6, 1944</strong>: D-Day landings in Normandy, France.</li>
-            <li><strong>May 8, 1945</strong>: Victory in Europe (VE) Day.</li>
-            <li><strong>August 6 and 9, 1945</strong>: Atomic bombings of Hiroshima and Nagasaki.</li>
-            <li><strong>September 2, 1945</strong>: Japan formally surrenders, ending World War II.</li>
-          </ul>
-          
-          <h3>Major Figures:</h3>
-          
-          <p><strong>Allied Leaders:</strong></p>
-          <ul>
-            <li>Franklin D. Roosevelt (United States)</li>
-            <li>Winston Churchill (United Kingdom)</li>
-            <li>Joseph Stalin (Soviet Union)</li>
-          </ul>
-          
-          <p><strong>Axis Leaders:</strong></p>
-          <ul>
-            <li>Adolf Hitler (Germany)</li>
-            <li>Benito Mussolini (Italy)</li>
-            <li>Hideki Tojo (Japan)</li>
-          </ul>
-          
-          <h3>Impact and Legacy:</h3>
-          
-          <p>World War II resulted in an estimated 70-85 million fatalities, making it the deadliest conflict in human history. The war led to significant political changes, including the decline of European colonial empires and the beginning of the Cold War between the United States and the Soviet Union.</p>
-          
-          <p>The United Nations was established to foster international cooperation and prevent future conflicts. The war also accelerated technological developments, including nuclear weapons, radar, jet engines, and electronic computers.</p>
-        `,
-      })
-      setLoading(false)
-    }
-
-    // Check if this note is bookmarked
-    const checkBookmark = () => {
-      const existingBookmarks = JSON.parse(localStorage.getItem("bookmarkedNotes") || "[]")
-      const isCurrentNoteBookmarked = existingBookmarks.some((bookmark: any) => bookmark.id === params.id)
-      setIsBookmarked(isCurrentNoteBookmarked)
     }
 
     loadNote()
-    checkBookmark()
-  }, [params.id])
+  }, [params.id, router])
 
-  const handleBookmark = () => {
-    if (!note) return
-
-    // Get existing bookmarks from localStorage or initialize empty array
-    const existingBookmarks = JSON.parse(localStorage.getItem("bookmarkedNotes") || "[]")
-
-    if (!isBookmarked) {
-      // Add this note to bookmarks
-      existingBookmarks.push({
-        id: note.id,
-        title: note.title,
-        subject: note.subject,
-        date: note.date,
-        teacher: note.teacher,
-      })
-      localStorage.setItem("bookmarkedNotes", JSON.stringify(existingBookmarks))
-
+  const handleDelete = () => {
+    if (!note || note.teacherName) {
       toast({
-        title: "Note Bookmarked",
-        description: "This note has been added to your bookmarks.",
+        title: "Cannot delete",
+        description: "You can only delete your own notes.",
+        variant: "destructive",
       })
-    } else {
-      // Remove this note from bookmarks
-      const updatedBookmarks = existingBookmarks.filter((bookmark: any) => bookmark.id !== note.id)
-      localStorage.setItem("bookmarkedNotes", JSON.stringify(updatedBookmarks))
-
-      toast({
-        title: "Bookmark Removed",
-        description: "This note has been removed from your bookmarks.",
-      })
+      return
     }
 
-    setIsBookmarked(!isBookmarked)
-  }
+    try {
+      const storedNotes = localStorage.getItem("studentNotes")
+      if (storedNotes) {
+        const notes = JSON.parse(storedNotes)
+        const updatedNotes = notes.filter((n: Note) => n.id !== note.id)
+        localStorage.setItem("studentNotes", JSON.stringify(updatedNotes))
+      }
 
-  const handleShare = () => {
-    // Copy the URL to clipboard
-    navigator.clipboard.writeText(window.location.href)
+      toast({
+        title: "Note deleted",
+        description: "Your note has been successfully deleted.",
+      })
 
-    toast({
-      title: "Share Link Copied",
-      description: "Link to this note has been copied to your clipboard.",
-    })
-  }
-
-  const handlePrint = () => {
-    window.print()
-  }
-
-  const handleDownload = () => {
-    // In a real app, you would generate a PDF here
-    // For now, we'll just show a toast
-    toast({
-      title: "Note Downloaded",
-      description: "The note has been downloaded as a PDF.",
-    })
+      router.push("/student/notes")
+    } catch (error) {
+      console.error("Error deleting note:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete the note.",
+        variant: "destructive",
+      })
+    }
   }
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
-        <DashboardSidebar role="student" />
-        <div className="flex-1 md:ml-64">
-          <div className="flex h-full items-center justify-center">
-            <p>Loading note...</p>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-500">Loading note...</p>
         </div>
       </div>
     )
@@ -192,69 +135,111 @@ export default function NotePage({ params }: { params: { id: string } }) {
 
   if (!note) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
-        <DashboardSidebar role="student" />
-        <div className="flex-1 md:ml-64">
-          <div className="flex h-full flex-col items-center justify-center p-6">
-            <h2 className="mb-2 text-xl font-bold">Note Not Found</h2>
-            <p className="mb-4 text-gray-600">The note you're looking for doesn't exist or has been removed.</p>
-            <Button onClick={() => router.push("/student/notes")}>Back to Notes</Button>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">Note not found</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <DashboardSidebar role="student" />
-
-      <div className="flex-1 md:ml-64">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
+    <div className="min-h-screen bg-gray-50">
+      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-4 md:px-6 shadow-sm">
+        <div className="flex items-center">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="flex items-center">
-            <Link href="/student/notes" className="mr-4">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-lg font-bold md:text-xl">Note Details</h1>
+            <BookOpen className="mr-2 h-5 w-5 text-green-600" />
+            <h1 className="text-lg font-bold md:text-xl truncate">{note.title}</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleBookmark}>
-              {isBookmarked ? <BookmarkCheck className="h-5 w-5 text-green-600" /> : <Bookmark className="h-5 w-5" />}
+        </div>
+        {!note.teacherName && (
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleShare}>
-              <Share className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handlePrint}>
-              <Printer className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleDownload}>
-              <Download className="h-5 w-5" />
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Note</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete this note? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        </header>
+        )}
+      </header>
 
-        <main className="p-4 md:p-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="mb-6">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <Badge className="bg-green-500">{note.subject}</Badge>
-                  <span className="text-sm text-gray-500">Grade {note.grade}</span>
-                  <span className="text-sm text-gray-500">•</span>
-                  <span className="text-sm text-gray-500">Posted on {note.date}</span>
-                  <span className="text-sm text-gray-500">•</span>
-                  <span className="text-sm text-gray-500">By {note.teacher}</span>
-                </div>
-                <h1 className="text-2xl font-bold md:text-3xl">{note.title}</h1>
+      <main className="mx-auto max-w-4xl p-4 md:p-6">
+        <Card className="shadow-md">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-2xl mb-2">{note.title}</CardTitle>
+                <CardDescription className="flex flex-wrap items-center gap-4 text-sm">
+                  <div className="flex items-center">
+                    <Tag className="mr-1 h-4 w-4" />
+                    {note.subject}
+                  </div>
+                  <div className="flex items-center">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    {new Date(note.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                  <div className="flex items-center">
+                    <User className="mr-1 h-4 w-4" />
+                    {note.teacherName ? `${note.teacherName} (Teacher)` : note.studentName || "Personal Note"}
+                  </div>
+                </CardDescription>
               </div>
+              <div className="flex flex-col items-end gap-2">
+                {note.teacherName && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                    Class Note
+                  </Badge>
+                )}
+                {note.grade && <Badge variant="secondary">Grade {note.grade}</Badge>}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="prose max-w-none">
+              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{note.content}</div>
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: note.content }} />
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+        {note.teacherName && (
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-medium text-blue-900 mb-2">Class Note Information</h3>
+            <p className="text-sm text-blue-800">
+              This note was created by your teacher and is shared with all students in Grade {note.grade}. You cannot
+              edit or delete class notes.
+            </p>
+          </div>
+        )}
+      </main>
     </div>
   )
 }
