@@ -150,19 +150,19 @@ export default function TeacherDashboard() {
   ]
 
   return (
-    <div className="w-full">
-      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-2 sm:px-4 md:px-6">
-        <div className="flex items-center min-w-0 flex-1">
-          <h1 className="text-sm sm:text-lg font-bold md:text-xl truncate">
+    <div className="flex min-h-screen w-full flex-col">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+        <div className="flex items-center gap-2 md:gap-4">
+          <h1 className="text-base font-semibold sm:text-lg md:text-xl">
             Welcome, <span className="text-green-600">{teacherInfo.name}</span>!
           </h1>
-          <div className="ml-2 sm:ml-4 flex items-center rounded-full bg-green-100 px-2 sm:px-3 py-1">
-            <span className="text-xs sm:text-sm font-medium text-green-600 truncate">
+          <div className="flex items-center rounded-full bg-green-100 px-2 py-1 sm:px-3">
+            <span className="text-xs font-medium text-green-600 sm:text-sm truncate">
               {teacherInfo.subjects.join(", ")} • Grade {teacherInfo.grades.join(", ")}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="ml-auto flex items-center gap-2 sm:gap-4">
           <NotificationBell notifications={notifications} onMarkAsRead={markAsRead} onMarkAllAsRead={markAllAsRead} />
           <Button
             variant="outline"
@@ -173,30 +173,30 @@ export default function TeacherDashboard() {
             <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Logout</span>
           </Button>
-          <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-green-100 text-green-600 text-xs sm:text-sm">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-green-600 text-xs sm:h-8 sm:w-8 sm:text-sm">
             {teacherInfo.name.charAt(0)}
           </div>
         </div>
       </header>
 
-      <div className="p-2 sm:p-4 md:p-6">
+      <main className="flex-1 space-y-4 p-4 sm:space-y-6 sm:p-6">
         <div className="mb-4 sm:mb-6">
           <Card className="border-2 border-green-200 bg-green-50">
-            <CardContent className="flex flex-col items-center justify-between p-3 sm:p-6 sm:flex-row">
+            <CardContent className="flex flex-col items-center justify-between p-4 sm:flex-row sm:p-6">
               <div className="flex items-center">
-                <div className="mr-3 sm:mr-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600 sm:mr-4 sm:h-12 sm:w-12">
                   <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div className="min-w-0">
-                  <h2 className="text-lg sm:text-xl font-bold truncate">{teacherInfo.name}</h2>
-                  <p className="text-sm sm:text-base text-gray-600 truncate">
+                <div>
+                  <h2 className="text-lg font-bold sm:text-xl">{teacherInfo.name}</h2>
+                  <p className="text-sm text-gray-600 sm:text-base truncate">
                     {teacherInfo.subjects.join(" & ")} Teacher
                   </p>
                 </div>
               </div>
-              <div className="mt-3 sm:mt-0 rounded-lg border border-green-200 bg-white p-3">
-                <p className="text-xs sm:text-sm text-gray-500">Teacher ID</p>
-                <p className="text-sm sm:text-lg font-bold text-green-600 truncate">{teacherInfo.teacherId}</p>
+              <div className="mt-3 rounded-lg border border-green-200 bg-white p-3 sm:mt-0">
+                <p className="text-xs text-gray-500 sm:text-sm">Teacher ID</p>
+                <p className="text-lg font-bold text-green-600 sm:text-xl">{teacherInfo.teacherId}</p>
                 <p className="text-xs text-gray-400 truncate">
                   Grade {teacherInfo.grades.join(", ")} • {teacherInfo.email}
                 </p>
@@ -205,60 +205,58 @@ export default function TeacherDashboard() {
           </Card>
         </div>
 
-        <div className="mb-4 sm:mb-6 grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
             <Card key={stat.title}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-gray-500 truncate">{stat.title}</CardTitle>
-                  <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500" />
-                </div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-xs font-medium sm:text-sm truncate">{stat.title}</CardTitle>
+                <stat.icon className="h-3 w-3 text-muted-foreground sm:h-4 sm:w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg sm:text-2xl font-bold">{stat.value}</div>
-                <p className="flex items-center text-xs text-green-600 truncate">{stat.change}</p>
+                <div className="text-xl font-bold sm:text-2xl">{stat.value}</div>
+                <p className="text-xs text-muted-foreground truncate">
+                  <span className="text-green-600">{stat.change}</span>
+                </p>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <div className="mb-4 sm:mb-6 grid gap-4 sm:gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-              </div>
+              <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-2 grid-cols-2">
+              <div className="grid gap-2 grid-cols-2 sm:gap-3">
                 <Link href="/teacher/quizzes/create">
                   <Button className="w-full justify-start bg-green-600 hover:bg-green-700 text-xs sm:text-sm p-2 sm:p-3">
-                    <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <FileText className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
                     <span className="truncate">Create Quiz</span>
                   </Button>
                 </Link>
                 <Link href="/teacher/notes">
                   <Button className="w-full justify-start bg-green-600 hover:bg-green-700 text-xs sm:text-sm p-2 sm:p-3">
-                    <BookOpen className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <BookOpen className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
                     <span className="truncate">Add Notes</span>
                   </Button>
                 </Link>
                 <Link href="/teacher/students">
                   <Button
                     variant="outline"
-                    className="w-full justify-start bg-transparent text-xs sm:text-sm p-2 sm:p-3"
+                    className="w-full justify-start text-xs sm:text-sm p-2 sm:p-3 bg-transparent"
                   >
-                    <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="truncate">View Students</span>
+                    <Users className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+                    <span className="truncate">Students</span>
                   </Button>
                 </Link>
                 <Link href="/teacher/grades">
                   <Button
                     variant="outline"
-                    className="w-full justify-start bg-transparent text-xs sm:text-sm p-2 sm:p-3"
+                    className="w-full justify-start text-xs sm:text-sm p-2 sm:p-3 bg-transparent"
                   >
-                    <Award className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="truncate">Grade Book</span>
+                    <Award className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+                    <span className="truncate">Grades</span>
                   </Button>
                 </Link>
               </div>
@@ -274,22 +272,22 @@ export default function TeacherDashboard() {
               <div className="space-y-3 sm:space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-medium">Quiz Completion Rate</span>
-                    <span className="text-xs sm:text-sm text-gray-500">87%</span>
+                    <span className="text-xs font-medium sm:text-sm">Quiz Completion Rate</span>
+                    <span className="text-xs text-gray-500 sm:text-sm">87%</span>
                   </div>
                   <Progress value={87} className="h-1.5 sm:h-2" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-medium">Average Class Score</span>
-                    <span className="text-xs sm:text-sm text-gray-500">82%</span>
+                    <span className="text-xs font-medium sm:text-sm">Average Class Score</span>
+                    <span className="text-xs text-gray-500 sm:text-sm">82%</span>
                   </div>
                   <Progress value={82} className="h-1.5 sm:h-2" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-medium">Student Engagement</span>
-                    <span className="text-xs sm:text-sm text-gray-500">94%</span>
+                    <span className="text-xs font-medium sm:text-sm">Student Engagement</span>
+                    <span className="text-xs text-gray-500 sm:text-sm">94%</span>
                   </div>
                   <Progress value={94} className="h-1.5 sm:h-2" />
                 </div>
@@ -309,14 +307,14 @@ export default function TeacherDashboard() {
                 {recentQuizzes.map((quiz) => (
                   <div key={quiz.id} className="flex items-center justify-between rounded-lg border p-3 sm:p-4">
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-medium text-sm sm:text-base truncate">{quiz.title}</h4>
-                      <p className="text-xs sm:text-sm text-gray-500 truncate">{quiz.subject}</p>
-                      <p className="text-xs sm:text-sm text-gray-500">
+                      <h4 className="text-sm font-medium sm:text-base truncate">{quiz.title}</h4>
+                      <p className="text-xs text-gray-500 sm:text-sm truncate">{quiz.subject}</p>
+                      <p className="text-xs text-gray-500 sm:text-sm">
                         {quiz.submissions}/{quiz.totalStudents} submitted
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm sm:text-lg font-bold">{quiz.avgScore}%</span>
+                      <span className="text-sm font-bold sm:text-lg">{quiz.avgScore}%</span>
                       <Badge variant="outline" className="ml-2 text-xs">
                         {quiz.date}
                       </Badge>
@@ -325,7 +323,7 @@ export default function TeacherDashboard() {
                 ))}
                 <Link
                   href="/teacher/quizzes"
-                  className="block text-center text-xs sm:text-sm text-green-600 hover:underline"
+                  className="block text-center text-xs text-green-600 hover:underline sm:text-sm"
                 >
                   View All Quizzes
                 </Link>
@@ -343,9 +341,9 @@ export default function TeacherDashboard() {
                 {recentNotes.map((note) => (
                   <div key={note.id} className="flex items-center justify-between rounded-lg border p-3 sm:p-4">
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-medium text-sm sm:text-base truncate">{note.title}</h4>
-                      <p className="text-xs sm:text-sm text-gray-500 truncate">{note.subject}</p>
-                      <p className="text-xs sm:text-sm text-gray-500">{note.views} views</p>
+                      <h4 className="text-sm font-medium sm:text-base truncate">{note.title}</h4>
+                      <p className="text-xs text-gray-500 sm:text-sm truncate">{note.subject}</p>
+                      <p className="text-xs text-gray-500 sm:text-sm">{note.views} views</p>
                     </div>
                     <div className="text-right">
                       <Badge variant="outline" className="text-xs">
@@ -356,7 +354,7 @@ export default function TeacherDashboard() {
                 ))}
                 <Link
                   href="/teacher/notes"
-                  className="block text-center text-xs sm:text-sm text-green-600 hover:underline"
+                  className="block text-center text-xs text-green-600 hover:underline sm:text-sm"
                 >
                   View All Notes
                 </Link>
@@ -364,7 +362,7 @@ export default function TeacherDashboard() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

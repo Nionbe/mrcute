@@ -1,243 +1,182 @@
 "use client"
 
-import { useState } from "react"
-import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import {
-  LayoutDashboard,
-  BookOpen,
-  Users,
-  Award,
-  Bell,
-  Settings,
-  CreditCard,
-  BarChart4,
-  FileText,
-  GraduationCap,
-  User,
-  Shield,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { toast } from "@/components/ui/use-toast"
+import {
+  Menu,
+  Home,
+  BookOpen,
+  FileText,
+  Trophy,
+  User,
+  Bell,
+  BarChart3,
+  Users,
+  Settings,
+  CreditCard,
+  GraduationCap,
+  LogOut,
+  ChevronRight,
+  Shield,
+} from "lucide-react"
+
+interface SidebarItem {
+  title: string
+  href: string
+  icon: any
+  badge?: number
+}
 
 interface DashboardSidebarProps {
-  role: "student" | "parent" | "teacher" | "admin"
+  role: "student" | "teacher" | "parent" | "admin"
 }
 
 export function DashboardSidebar({ role }: DashboardSidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
 
-  const getNavigationItems = () => {
-    const baseItems = [
-      {
-        name: "Dashboard",
-        href: `/${role}/dashboard`,
-        icon: LayoutDashboard,
-      },
-    ]
-
-    switch (role) {
-      case "student":
-        return [
-          ...baseItems,
-          {
-            name: "Study Notes",
-            href: "/student/notes",
-            icon: BookOpen,
-          },
-          {
-            name: "Quizzes",
-            href: "/student/quizzes",
-            icon: FileText,
-          },
-          {
-            name: "Results",
-            href: "/student/results",
-            icon: Award,
-          },
-          {
-            name: "Leaderboard",
-            href: "/student/leaderboard",
-            icon: Award,
-          },
-          {
-            name: "Notifications",
-            href: "/student/notifications",
-            icon: Bell,
-          },
-          {
-            name: "Profile",
-            href: "/student/profile",
-            icon: User,
-          },
-        ]
-
-      case "parent":
-        return [
-          ...baseItems,
-          {
-            name: "Child Progress",
-            href: "/parent/progress",
-            icon: BarChart4,
-          },
-          {
-            name: "Leaderboard",
-            href: "/parent/leaderboard",
-            icon: Award,
-          },
-          {
-            name: "Payments",
-            href: "/parent/payments",
-            icon: CreditCard,
-          },
-          {
-            name: "Notifications",
-            href: "/parent/notifications",
-            icon: Bell,
-          },
-        ]
-
-      case "teacher":
-        return [
-          ...baseItems,
-          {
-            name: "Students",
-            href: "/teacher/students",
-            icon: Users,
-          },
-          {
-            name: "Study Notes",
-            href: "/teacher/notes",
-            icon: BookOpen,
-          },
-          {
-            name: "Quizzes",
-            href: "/teacher/quizzes",
-            icon: FileText,
-          },
-          {
-            name: "Grades",
-            href: "/teacher/grades",
-            icon: GraduationCap,
-          },
-          {
-            name: "Notifications",
-            href: "/teacher/notifications",
-            icon: Bell,
-          },
-        ]
-
-      case "admin":
-        return [
-          ...baseItems,
-          {
-            name: "Users",
-            href: "/admin/users",
-            icon: Users,
-          },
-          {
-            name: "Content",
-            href: "/admin/content",
-            icon: BookOpen,
-          },
-          {
-            name: "Payments",
-            href: "/admin/payments",
-            icon: CreditCard,
-          },
-          {
-            name: "KYC Management",
-            href: "/admin/kyc",
-            icon: Shield,
-          },
-          {
-            name: "Leaderboard",
-            href: "/admin/leaderboard",
-            icon: Award,
-          },
-          {
-            name: "Analytics",
-            href: "/admin/analytics",
-            icon: BarChart4,
-          },
-          {
-            name: "Notifications",
-            href: "/admin/notifications",
-            icon: Bell,
-          },
-          {
-            name: "Settings",
-            href: "/admin/settings",
-            icon: Settings,
-          },
-        ]
-
-      default:
-        return baseItems
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
     }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.clear()
+    toast({
+      title: "Logged out successfully",
+      description: "You have been logged out of your account.",
+    })
+    router.push("/")
+  }
+
+  const getNavigationItems = (): SidebarItem[] => {
+    const baseItems = {
+      student: [
+        { title: "Dashboard", href: "/student/dashboard", icon: Home },
+        { title: "Notes", href: "/student/notes", icon: BookOpen },
+        { title: "Quizzes", href: "/student/quizzes", icon: FileText },
+        { title: "Results", href: "/student/results", icon: BarChart3 },
+        { title: "Leaderboard", href: "/student/leaderboard", icon: Trophy },
+        { title: "Profile", href: "/student/profile", icon: User },
+        { title: "Notifications", href: "/student/notifications", icon: Bell, badge: 3 },
+      ],
+      teacher: [
+        { title: "Dashboard", href: "/teacher/dashboard", icon: Home },
+        { title: "Students", href: "/teacher/students", icon: Users },
+        { title: "Notes", href: "/teacher/notes", icon: BookOpen },
+        { title: "Quizzes", href: "/teacher/quizzes", icon: FileText },
+        { title: "Grades", href: "/teacher/grades", icon: BarChart3 },
+        { title: "Notifications", href: "/teacher/notifications", icon: Bell },
+      ],
+      parent: [
+        { title: "Dashboard", href: "/parent/dashboard", icon: Home },
+        { title: "Progress", href: "/parent/progress", icon: BarChart3 },
+        { title: "Leaderboard", href: "/parent/leaderboard", icon: Trophy },
+        { title: "Notifications", href: "/parent/notifications", icon: Bell },
+      ],
+      admin: [
+        { title: "Dashboard", href: "/admin/dashboard", icon: Home },
+        { title: "Users", href: "/admin/users", icon: Users },
+        { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+        { title: "Content", href: "/admin/content", icon: BookOpen },
+        { title: "KYC", href: "/admin/kyc", icon: Shield },
+        { title: "Payments", href: "/admin/payments", icon: CreditCard },
+        { title: "Settings", href: "/admin/settings", icon: Settings },
+      ],
+    }
+    return baseItems[role] || baseItems.student
   }
 
   const navigationItems = getNavigationItems()
 
-  return (
-    <div
-      className={cn(
-        "fixed left-0 top-0 z-40 h-full bg-white border-r border-gray-200 transition-all duration-300",
-        collapsed ? "w-16" : "w-64",
-      )}
-    >
-      <div className="flex h-16 items-center justify-between px-4 border-b">
-        {!collapsed && (
-          <div className="flex items-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-green-600 text-white font-bold">SA</div>
-            <span className="ml-2 text-lg font-bold text-gray-900">Safari Academy</span>
-          </div>
-        )}
-        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="h-8 w-8">
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+  const SidebarContent = () => (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex h-14 items-center border-b px-4 lg:h-16 lg:px-6">
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <GraduationCap className="h-5 w-5 text-green-600 sm:h-6 sm:w-6" />
+          <span className="text-sm font-bold text-green-600 sm:text-base">Safari Academy</span>
+        </Link>
       </div>
 
+      {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           {navigationItems.map((item) => {
             const isActive = pathname === item.href
+            const Icon = item.icon
+
             return (
-              <Link key={item.name} href={item.href}>
-                <div
-                  className={cn(
-                    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive ? "bg-green-100 text-green-700" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
-                  )}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && <span className="ml-3">{item.name}</span>}
-                </div>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
+                  isActive ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground",
+                )}
+                onClick={() => isMobile && setIsOpen(false)}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="flex-1 truncate">{item.title}</span>
+                {item.badge && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                    {item.badge}
+                  </span>
+                )}
+                {isMobile && <ChevronRight className="h-4 w-4 opacity-50" />}
               </Link>
             )
           })}
         </nav>
       </ScrollArea>
 
-      {!collapsed && (
-        <div className="border-t p-4">
-          <div className="flex items-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600 text-sm font-medium">
-              {role.charAt(0).toUpperCase()}
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900 capitalize">{role}</p>
-              <p className="text-xs text-gray-500">Safari Academy</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Footer */}
+      <div className="border-t p-4">
+        <Button variant="ghost" className="w-full justify-start gap-3 text-sm" onClick={handleLogout}>
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </Button>
+      </div>
+    </div>
+  )
+
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Menu Button */}
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="fixed left-4 top-4 z-40 md:hidden bg-transparent">
+              <Menu className="h-4 w-4" />
+              <span className="sr-only">Toggle navigation menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <SidebarContent />
+          </SheetContent>
+        </Sheet>
+      </>
+    )
+  }
+
+  return (
+    <div className="hidden border-r bg-muted/40 md:block">
+      <div className="flex h-full max-h-screen flex-col gap-2">
+        <SidebarContent />
+      </div>
     </div>
   )
 }
-
-export default DashboardSidebar
