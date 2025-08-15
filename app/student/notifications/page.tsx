@@ -4,83 +4,104 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bell, BellRing, BookOpen, FileText, Calendar, Trash2, CheckCircle, RefreshCw, Users } from "lucide-react"
-import DataManager, { type Notification, type User } from "@/lib/data-manager"
+import { Bell, BellRing, BookOpen, FileText, Calendar, Trash2, CheckCircle, RefreshCw } from "lucide-react"
+
+interface Notification {
+  id: string
+  title: string
+  message: string
+  type: "quiz" | "note" | "general"
+  read: boolean
+  createdAt: string
+  grade?: string
+  quizTitle?: string
+  noteTitle?: string
+}
 
 export default function StudentNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-
-  const dataManager = DataManager.getInstance()
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
-    initializeData()
-    setupEventListeners()
+    // Get current user
+    const user = JSON.parse(localStorage.getItem("currentUser") || "{}")
+    setCurrentUser(user)
+
+    loadNotifications()
+
+    // Listen for real-time notification updates
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "studentNotifications") {
+        console.log("Notifications updated, reloading...")
+        loadNotifications()
+      }
+    }
+
+    // Listen for custom storage events (same tab)
+    const handleCustomStorageChange = (e: any) => {
+      if (e.key === "studentNotifications") {
+        console.log("Notifications updated (custom), reloading...")
+        loadNotifications()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("storage", handleCustomStorageChange)
 
     return () => {
-      // Cleanup event listeners
-      dataManager.removeEventListener("notifications-updated", handleNotificationsUpdate)
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("storage", handleCustomStorageChange)
     }
   }, [])
 
-  const initializeData = async () => {
+  const loadNotifications = () => {
     try {
       setLoading(true)
+      const savedNotifications = localStorage.getItem("studentNotifications")
+      if (savedNotifications) {
+        const allNotifications = JSON.parse(savedNotifications)
 
-      // Get current user from localStorage or set default
-      let user = dataManager.getCurrentUser()
-      if (!user) {
-        // Set default student user
-        const defaultStudent: User = {
-          id: "student-1",
-          name: localStorage.getItem("userName") || "Alex Smith",
-          email: "alex.smith@student.safariacademy.edu",
-          role: "student",
-          grade: localStorage.getItem("userGrade") || "10",
-        }
-        dataManager.setCurrentUser(defaultStudent.id)
-        user = defaultStudent
+        // Filter notifications for current user's grade
+        const userGrade = JSON.parse(localStorage.getItem("currentUser") || "{}").grade
+        const filteredNotifications = allNotifications.filter(
+          (notif: Notification) => !notif.grade || notif.grade === userGrade,
+        )
+
+        // Sort by creation date (newest first)
+        filteredNotifications.sort(
+          (a: Notification, b: Notification) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+
+        console.log("Loaded notifications:", filteredNotifications.length)
+        setNotifications(filteredNotifications)
+      } else {
+        setNotifications([])
       }
-
-      setCurrentUser(user)
-
-      // Load notifications for this user
-      loadNotifications(user)
     } catch (error) {
-      console.error("Error initializing data:", error)
+      console.error("Error loading notifications:", error)
+      setNotifications([])
     } finally {
       setLoading(false)
     }
   }
 
-  const setupEventListeners = () => {
-    dataManager.addEventListener("notifications-updated", handleNotificationsUpdate)
-  }
-
-  const handleNotificationsUpdate = (data: Notification[]) => {
-    if (currentUser) {
-      loadNotifications(currentUser)
-    }
-  }
-
-  const loadNotifications = (user: User) => {
-    try {
-      const userNotifications = dataManager.getNotificationsForUser(user.id, user.role, user.grade)
-      setNotifications(userNotifications)
-      console.log(`Loaded ${userNotifications.length} notifications for user ${user.id}`)
-    } catch (error) {
-      console.error("Error loading notifications:", error)
-      setNotifications([])
-    }
-  }
-
   const markAsRead = (notificationId: string) => {
     try {
-      const success = dataManager.markNotificationAsRead(notificationId)
-      if (success && currentUser) {
-        loadNotifications(currentUser)
-      }
+      const updatedNotifications = notifications.map((notif) =>
+        notif.id === notificationId ? { ...notif, read: true } : notif,
+      )
+
+      // Update local state
+      setNotifications(updatedNotifications)
+
+      // Update localStorage with all notifications (not just filtered ones)
+      const allNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const updatedAllNotifications = allNotifications.map((notif: Notification) =>
+        notif.id === notificationId ? { ...notif, read: true } : notif,
+      )
+
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedAllNotifications))
     } catch (error) {
       console.error("Error marking notification as read:", error)
     }
@@ -88,10 +109,13 @@ export default function StudentNotificationsPage() {
 
   const markAllAsRead = () => {
     try {
-      if (currentUser) {
-        dataManager.markAllNotificationsAsRead(currentUser.id, currentUser.role, currentUser.grade)
-        loadNotifications(currentUser)
-      }
+      const updatedNotifications = notifications.map((notif) => ({ ...notif, read: true }))
+      setNotifications(updatedNotifications)
+
+      // Update localStorage
+      const allNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const updatedAllNotifications = allNotifications.map((notif: Notification) => ({ ...notif, read: true }))
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedAllNotifications))
     } catch (error) {
       console.error("Error marking all notifications as read:", error)
     }
@@ -99,8 +123,13 @@ export default function StudentNotificationsPage() {
 
   const deleteNotification = (notificationId: string) => {
     try {
-      // For now, we'll just mark as read since we don't have a delete method
-      markAsRead(notificationId)
+      const updatedNotifications = notifications.filter((notif) => notif.id !== notificationId)
+      setNotifications(updatedNotifications)
+
+      // Update localStorage
+      const allNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const updatedAllNotifications = allNotifications.filter((notif: Notification) => notif.id !== notificationId)
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedAllNotifications))
     } catch (error) {
       console.error("Error deleting notification:", error)
     }
@@ -112,66 +141,33 @@ export default function StudentNotificationsPage() {
         return <BookOpen className="w-5 h-5 text-blue-500" />
       case "note":
         return <FileText className="w-5 h-5 text-green-500" />
-      case "announcement":
-        return <Users className="w-5 h-5 text-purple-500" />
       default:
         return <Bell className="w-5 h-5 text-gray-500" />
     }
   }
 
   const refreshNotifications = () => {
-    if (currentUser) {
-      loadNotifications(currentUser)
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      const now = new Date()
-      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-
-      if (diffInMinutes < 1) return "Just now"
-      if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`
-      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hours ago`
-      if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)} days ago`
-
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    } catch {
-      return dateString
-    }
+    loadNotifications()
   }
 
   const unreadCount = notifications.filter((notif) => !notif.read).length
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="grid gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 rounded-lg h-24"></div>
-            </div>
-          ))}
+      <div className="container mx-auto p-4">
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+          <span>Loading notifications...</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <BellRing className="w-8 h-8" />
             Notifications
             {unreadCount > 0 && (
@@ -180,18 +176,16 @@ export default function StudentNotificationsPage() {
               </Badge>
             )}
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Stay updated with the latest announcements and content
-          </p>
+          <p className="text-muted-foreground">Stay updated with the latest announcements and content</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={refreshNotifications} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
           {unreadCount > 0 && (
             <Button onClick={markAllAsRead} variant="outline">
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <CheckCircle className="w-4 h-4 mr-2" />
               Mark All Read
             </Button>
           )}
@@ -199,13 +193,13 @@ export default function StudentNotificationsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
               <Bell className="w-5 h-5 text-blue-500" />
               <div>
-                <p className="text-sm text-gray-500">Total</p>
+                <p className="text-sm text-muted-foreground">Total</p>
                 <p className="text-2xl font-bold">{notifications.length}</p>
               </div>
             </div>
@@ -216,7 +210,7 @@ export default function StudentNotificationsPage() {
             <div className="flex items-center space-x-2">
               <BellRing className="w-5 h-5 text-red-500" />
               <div>
-                <p className="text-sm text-gray-500">Unread</p>
+                <p className="text-sm text-muted-foreground">Unread</p>
                 <p className="text-2xl font-bold">{unreadCount}</p>
               </div>
             </div>
@@ -227,7 +221,7 @@ export default function StudentNotificationsPage() {
             <div className="flex items-center space-x-2">
               <Calendar className="w-5 h-5 text-green-500" />
               <div>
-                <p className="text-sm text-gray-500">Today</p>
+                <p className="text-sm text-muted-foreground">Today</p>
                 <p className="text-2xl font-bold">
                   {
                     notifications.filter((notif) => {
@@ -248,10 +242,10 @@ export default function StudentNotificationsPage() {
         {notifications.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Bell className="w-12 h-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Notifications</h3>
-              <p className="text-gray-600 text-center">
-                You're all caught up! New notifications will appear here when your teachers share content.
+              <Bell className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Notifications</h3>
+              <p className="text-muted-foreground text-center">
+                You're all caught up! New notifications will appear here.
               </p>
             </CardContent>
           </Card>
@@ -275,7 +269,7 @@ export default function StudentNotificationsPage() {
                             New
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-xs capitalize">
+                        <Badge variant="outline" className="text-xs">
                           {notification.type}
                         </Badge>
                       </div>
@@ -283,14 +277,11 @@ export default function StudentNotificationsPage() {
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant="outline" className="text-xs">
                           <Calendar className="w-3 h-3 mr-1" />
-                          {formatDate(notification.createdAt)}
+                          {new Date(notification.createdAt).toLocaleString()}
                         </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          From: {notification.senderName}
-                        </Badge>
-                        {notification.targetGrade && (
+                        {notification.grade && (
                           <Badge variant="outline" className="text-xs">
-                            Grade {notification.targetGrade}
+                            {notification.grade}
                           </Badge>
                         )}
                       </div>
