@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Edit, Plus, BookOpen, Calendar, Users, Search, Filter } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Trash2, Edit, Plus, BookOpen, Calendar, Users, Search, Eye, RefreshCw } from "lucide-react"
 import { toast } from "@/components/ui/toast"
 import {
   Dialog,
@@ -19,18 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  subject: string
-  grade: string
-  createdAt: string
-  teacherId: string
-  teacherName: string
-  views?: number
-}
+import DataManager, { type Note, type User } from "@/lib/data-manager"
 
 export default function TeacherNotesPage() {
   const [notes, setNotes] = useState<Note[]>([])
@@ -39,18 +29,17 @@ export default function TeacherNotesPage() {
   const [filterGrade, setFilterGrade] = useState("all")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     subject: "",
     grade: "",
+    isPublished: true,
   })
-  const [teacherInfo, setTeacherInfo] = useState({
-    name: "Loading...",
-    subject: "Mathematics",
-    grade: "10",
-    teacherId: "Loading...",
-  })
+
+  const dataManager = DataManager.getInstance()
 
   const subjects = [
     "Mathematics",
@@ -72,43 +61,73 @@ export default function TeacherNotesPage() {
   const grades = Array.from({ length: 12 }, (_, i) => (i + 1).toString())
 
   useEffect(() => {
-    // Get teacher info
-    const userName = localStorage.getItem("userName") || "Teacher"
-    const userId = localStorage.getItem("userId") || "TA789012"
-    const userSubject = localStorage.getItem("userSubject") || "Mathematics"
-    const userGrade = localStorage.getItem("userGrade") || "10"
+    initializeData()
+    setupEventListeners()
 
-    setTeacherInfo({
-      name: userName,
-      subject: userSubject,
-      grade: userGrade,
-      teacherId: userId,
-    })
-
-    // Set default form values
-    setFormData((prev) => ({
-      ...prev,
-      subject: userSubject,
-      grade: userGrade,
-    }))
-
-    loadNotes(userId)
+    return () => {
+      // Cleanup event listeners
+      dataManager.removeEventListener("notes-updated", handleNotesUpdate)
+    }
   }, [])
 
   useEffect(() => {
     filterNotes()
   }, [notes, searchTerm, filterGrade])
 
+  const initializeData = async () => {
+    try {
+      setLoading(true)
+
+      // Get current user from localStorage or set default
+      let user = dataManager.getCurrentUser()
+      if (!user) {
+        // Set default teacher user
+        const defaultTeacher: User = {
+          id: "teacher-1",
+          name: localStorage.getItem("userName") || "Sarah Johnson",
+          email: "sarah.johnson@safariacademy.edu",
+          role: "teacher",
+          grade: localStorage.getItem("userGrade") || "10",
+          subject: localStorage.getItem("userSubject") || "Mathematics",
+        }
+        dataManager.setCurrentUser(defaultTeacher.id)
+        user = defaultTeacher
+      }
+
+      setCurrentUser(user)
+
+      // Set default form values
+      setFormData((prev) => ({
+        ...prev,
+        subject: user?.subject || "Mathematics",
+        grade: user?.grade || "10",
+      }))
+
+      // Load teacher's notes
+      loadNotes(user.id)
+    } catch (error) {
+      console.error("Error initializing data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const setupEventListeners = () => {
+    dataManager.addEventListener("notes-updated", handleNotesUpdate)
+  }
+
+  const handleNotesUpdate = (data: Note[]) => {
+    if (currentUser) {
+      const teacherNotes = dataManager.getNotesByTeacher(currentUser.id)
+      setNotes(teacherNotes)
+    }
+  }
+
   const loadNotes = (teacherId: string) => {
     try {
-      const storedNotes = JSON.parse(localStorage.getItem("teacherNotes") || "[]")
-      const teacherNotes = storedNotes.filter((note: Note) => note.teacherId === teacherId)
-
-      // Sort by creation date (newest first)
-      teacherNotes.sort((a: Note, b: Note) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
+      const teacherNotes = dataManager.getNotesByTeacher(teacherId)
       setNotes(teacherNotes)
-      console.log("Loaded teacher notes:", teacherNotes.length)
+      console.log(`Loaded ${teacherNotes.length} notes for teacher ${teacherId}`)
     } catch (error) {
       console.error("Error loading notes:", error)
       setNotes([])
@@ -136,70 +155,6 @@ export default function TeacherNotesPage() {
     setFilteredNotes(filtered)
   }
 
-  const saveNotes = (updatedNotes: Note[]) => {
-    try {
-      // Get all notes from localStorage
-      const allNotes = JSON.parse(localStorage.getItem("teacherNotes") || "[]")
-
-      // Remove old notes from this teacher
-      const otherTeacherNotes = allNotes.filter((note: Note) => note.teacherId !== teacherInfo.teacherId)
-
-      // Add updated notes from this teacher
-      const newAllNotes = [...otherTeacherNotes, ...updatedNotes]
-
-      // Save back to localStorage
-      localStorage.setItem("teacherNotes", JSON.stringify(newAllNotes))
-
-      // Update local state
-      setNotes(updatedNotes)
-
-      // Trigger real-time update for students
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "teacherNotes",
-          newValue: JSON.stringify(newAllNotes),
-        }),
-      )
-
-      console.log("Saved notes to localStorage:", newAllNotes.length)
-    } catch (error) {
-      console.error("Error saving notes:", error)
-    }
-  }
-
-  const addStudentNotification = (noteTitle: string, noteGrade: string) => {
-    try {
-      const existingNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
-      const newNotification = {
-        id: `note-${Date.now()}`,
-        title: "New Study Material Available",
-        message: `Your teacher has shared a new note: "${noteTitle}" for Grade ${noteGrade}`,
-        type: "note",
-        read: false,
-        createdAt: new Date().toISOString(),
-        grade: noteGrade,
-        noteTitle,
-        time: "Just now",
-        date: new Date().toLocaleDateString(),
-      }
-
-      const updatedNotifications = [newNotification, ...existingNotifications]
-      localStorage.setItem("studentNotifications", JSON.stringify(updatedNotifications))
-
-      // Trigger notification update
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "studentNotifications",
-          newValue: JSON.stringify(updatedNotifications),
-        }),
-      )
-
-      console.log("Added student notification:", newNotification)
-    } catch (error) {
-      console.error("Error adding student notification:", error)
-    }
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -212,51 +167,70 @@ export default function TeacherNotesPage() {
       return
     }
 
-    if (editingNote) {
-      // Update existing note
-      const updatedNotes = notes.map((note) =>
-        note.id === editingNote.id
-          ? { ...note, ...formData, teacherId: teacherInfo.teacherId, teacherName: teacherInfo.name }
-          : note,
-      )
-      saveNotes(updatedNotes)
-
+    if (!currentUser) {
       toast({
-        title: "Success",
-        description: "Note updated successfully",
+        title: "Error",
+        description: "User not found",
+        variant: "destructive",
       })
-      setEditingNote(null)
-    } else {
-      // Create new note
-      const newNote: Note = {
-        id: `note-${Date.now()}`,
-        ...formData,
-        createdAt: new Date().toISOString(),
-        teacherId: teacherInfo.teacherId,
-        teacherName: teacherInfo.name,
-        views: 0,
-      }
-
-      const updatedNotes = [newNote, ...notes]
-      saveNotes(updatedNotes)
-
-      // Add notification for students
-      addStudentNotification(formData.title, formData.grade)
-
-      toast({
-        title: "Success",
-        description: "Note created and students have been notified!",
-      })
+      return
     }
 
-    // Reset form
-    setFormData({
-      title: "",
-      content: "",
-      subject: teacherInfo.subject,
-      grade: teacherInfo.grade,
-    })
-    setIsCreateDialogOpen(false)
+    try {
+      if (editingNote) {
+        // Update existing note
+        const updatedNote = dataManager.updateNote(editingNote.id, {
+          title: formData.title,
+          content: formData.content,
+          subject: formData.subject,
+          grade: formData.grade,
+          isPublished: formData.isPublished,
+        })
+
+        if (updatedNote) {
+          toast({
+            title: "Success",
+            description: "Note updated successfully",
+          })
+          loadNotes(currentUser.id)
+        }
+        setEditingNote(null)
+      } else {
+        // Create new note
+        const newNote = dataManager.createNote({
+          title: formData.title,
+          content: formData.content,
+          subject: formData.subject,
+          grade: formData.grade,
+          teacherId: currentUser.id,
+          teacherName: currentUser.name,
+          isPublished: formData.isPublished,
+        })
+
+        toast({
+          title: "Success",
+          description: "Note created and students have been notified!",
+        })
+        loadNotes(currentUser.id)
+      }
+
+      // Reset form
+      setFormData({
+        title: "",
+        content: "",
+        subject: currentUser.subject || "Mathematics",
+        grade: currentUser.grade || "10",
+        isPublished: true,
+      })
+      setIsCreateDialogOpen(false)
+    } catch (error) {
+      console.error("Error saving note:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save note",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleEdit = (note: Note) => {
@@ -266,18 +240,37 @@ export default function TeacherNotesPage() {
       content: note.content,
       subject: note.subject,
       grade: note.grade,
+      isPublished: note.isPublished,
     })
     setIsCreateDialogOpen(true)
   }
 
   const handleDelete = (noteId: string) => {
-    const updatedNotes = notes.filter((note) => note.id !== noteId)
-    saveNotes(updatedNotes)
-
-    toast({
-      title: "Success",
-      description: "Note deleted successfully",
-    })
+    try {
+      const success = dataManager.deleteNote(noteId)
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Note deleted successfully",
+        })
+        if (currentUser) {
+          loadNotes(currentUser.id)
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete note",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete note",
+        variant: "destructive",
+      })
+    }
   }
 
   const cancelEdit = () => {
@@ -285,10 +278,49 @@ export default function TeacherNotesPage() {
     setFormData({
       title: "",
       content: "",
-      subject: teacherInfo.subject,
-      grade: teacherInfo.grade,
+      subject: currentUser?.subject || "Mathematics",
+      grade: currentUser?.grade || "10",
+      isPublished: true,
     })
     setIsCreateDialogOpen(false)
+  }
+
+  const refreshNotes = () => {
+    if (currentUser) {
+      loadNotes(currentUser.id)
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    } catch {
+      return dateString
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-200 rounded-lg h-32"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -297,12 +329,78 @@ export default function TeacherNotesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Study Notes</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Create and manage study notes for your students</p>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            Create and manage study notes for your students
+            {currentUser && ` • ${currentUser.subject} • Grade ${currentUser.grade}`}
+          </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Note
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={refreshNotes} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Note
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <BookOpen className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-gray-500">Total Notes</p>
+                <p className="text-2xl font-bold">{notes.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Eye className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="text-sm text-gray-500">Published</p>
+                <p className="text-2xl font-bold">{notes.filter((n) => n.isPublished).length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Users className="w-5 h-5 text-purple-500" />
+              <div>
+                <p className="text-sm text-gray-500">Total Views</p>
+                <p className="text-2xl font-bold">{notes.reduce((sum, note) => sum + note.views, 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-sm text-gray-500">This Week</p>
+                <p className="text-2xl font-bold">
+                  {
+                    notes.filter((note) => {
+                      const noteDate = new Date(note.createdAt)
+                      const weekAgo = new Date()
+                      weekAgo.setDate(weekAgo.getDate() - 7)
+                      return noteDate >= weekAgo
+                    }).length
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Search and Filter */}
@@ -335,9 +433,6 @@ export default function TeacherNotesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -370,7 +465,10 @@ export default function TeacherNotesPage() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{note.title}</CardTitle>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg">{note.title}</CardTitle>
+                      {!note.isPublished && <Badge variant="secondary">Draft</Badge>}
+                    </div>
                     <CardDescription className="flex flex-wrap items-center gap-2 mt-2">
                       <Badge variant="secondary">
                         <BookOpen className="w-3 h-3 mr-1" />
@@ -382,9 +480,12 @@ export default function TeacherNotesPage() {
                       </Badge>
                       <Badge variant="outline">
                         <Calendar className="w-3 h-3 mr-1" />
-                        {new Date(note.createdAt).toLocaleDateString()}
+                        {formatDate(note.createdAt)}
                       </Badge>
-                      {note.views !== undefined && <Badge variant="outline">{note.views} views</Badge>}
+                      <Badge variant="outline">
+                        <Eye className="w-3 h-3 mr-1" />
+                        {note.views} views
+                      </Badge>
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -402,7 +503,7 @@ export default function TeacherNotesPage() {
                   <p className="whitespace-pre-wrap text-sm text-gray-700 line-clamp-3">{note.content}</p>
                 </div>
                 <div className="mt-4 flex justify-between items-center">
-                  <span className="text-xs text-gray-500">Created by {note.teacherName}</span>
+                  <span className="text-xs text-gray-500">Last updated: {formatDate(note.updatedAt)}</span>
                   <Button variant="link" className="text-green-600 p-0 h-auto">
                     View Full Note
                   </Button>
@@ -482,6 +583,15 @@ export default function TeacherNotesPage() {
                   rows={8}
                   required
                 />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isPublished"
+                  checked={formData.isPublished}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isPublished: checked })}
+                />
+                <Label htmlFor="isPublished">Publish immediately (students will be notified)</Label>
               </div>
             </div>
 

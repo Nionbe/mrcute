@@ -6,21 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Search, Calendar, User, RefreshCw, Plus, Eye } from "lucide-react"
+import { BookOpen, Search, Calendar, UserIcon, RefreshCw, Plus, Eye } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  subject: string
-  grade: string
-  createdAt: string
-  teacherId: string
-  teacherName: string
-  views?: number
-  isPersonal?: boolean
-}
+import DataManager, { type Note } from "@/lib/data-manager"
 
 export default function StudentNotesPage() {
   const [teacherNotes, setTeacherNotes] = useState<Note[]>([])
@@ -28,111 +17,88 @@ export default function StudentNotesPage() {
   const [filteredTeacherNotes, setFilteredTeacherNotes] = useState<Note[]>([])
   const [filteredPersonalNotes, setFilteredPersonalNotes] = useState<Note[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [subjectFilter, setSubjectFilter] = useState("all")
   const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{
+    id: string
+    name: string
+    email: string
+    role: string
+    grade: string
+  } | null>(null)
+
+  const dataManager = DataManager.getInstance()
 
   useEffect(() => {
-    // Get current user
-    const userName = localStorage.getItem("userName") || "Student"
-    const userGrade = localStorage.getItem("userGrade") || "10"
-    const userId = localStorage.getItem("userId") || "ST123456"
-
-    setCurrentUser({
-      name: userName,
-      grade: userGrade,
-      id: userId,
-    })
-
-    loadNotes(userGrade)
-
-    // Listen for real-time updates
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "teacherNotes") {
-        console.log("Teacher notes updated, reloading...")
-        loadNotes(userGrade)
-      } else if (e.key === "studentNotes") {
-        console.log("Student notes updated, reloading...")
-        loadPersonalNotes()
-      }
-    }
-
-    // Listen for custom storage events (same tab)
-    const handleCustomStorageChange = (e: any) => {
-      if (e.key === "teacherNotes") {
-        console.log("Teacher notes updated (custom), reloading...")
-        loadNotes(userGrade)
-      } else if (e.key === "studentNotes") {
-        console.log("Student notes updated (custom), reloading...")
-        loadPersonalNotes()
-      }
-    }
-
-    window.addEventListener("storage", handleStorageChange)
-    window.addEventListener("storage", handleCustomStorageChange)
+    initializeData()
+    setupEventListeners()
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange)
-      window.removeEventListener("storage", handleCustomStorageChange)
+      // Cleanup event listeners
+      dataManager.removeEventListener("notes-updated", handleNotesUpdate)
     }
   }, [])
 
   useEffect(() => {
     filterNotes()
-  }, [teacherNotes, personalNotes, searchTerm])
+  }, [teacherNotes, personalNotes, searchTerm, subjectFilter])
 
-  const loadNotes = (userGrade: string) => {
+  const initializeData = async () => {
     try {
       setLoading(true)
 
-      // Load teacher notes
-      const savedTeacherNotes = localStorage.getItem("teacherNotes")
-      if (savedTeacherNotes) {
-        const allTeacherNotes = JSON.parse(savedTeacherNotes)
-
-        // Filter by student's grade
-        const filteredNotes = allTeacherNotes.filter((note: Note) => {
-          return note.grade === userGrade || note.grade === "all"
-        })
-
-        // Sort by creation date (newest first)
-        filteredNotes.sort((a: Note, b: Note) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-        console.log(`Loaded ${filteredNotes.length} teacher notes for grade ${userGrade}`)
-        setTeacherNotes(filteredNotes)
-      } else {
-        setTeacherNotes([])
+      // Get current user from localStorage or set default
+      let user = dataManager.getCurrentUser()
+      if (!user) {
+        // Set default student user
+        const defaultStudent = {
+          id: "student-1",
+          name: localStorage.getItem("userName") || "Alex Smith",
+          email: "alex.smith@student.safariacademy.edu",
+          role: "student",
+          grade: localStorage.getItem("userGrade") || "10",
+        }
+        dataManager.setCurrentUser(defaultStudent.id)
+        user = defaultStudent
       }
 
-      // Load personal notes
-      loadPersonalNotes()
+      setCurrentUser(user)
+
+      // Load notes for student's grade
+      if (user.grade) {
+        loadNotes(user.grade)
+      }
     } catch (error) {
-      console.error("Error loading notes:", error)
-      setTeacherNotes([])
-      setPersonalNotes([])
+      console.error("Error initializing data:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const loadPersonalNotes = () => {
+  const setupEventListeners = () => {
+    dataManager.addEventListener("notes-updated", handleNotesUpdate)
+  }
+
+  const handleNotesUpdate = (data: Note[]) => {
+    if (currentUser?.grade) {
+      loadNotes(currentUser.grade)
+    }
+  }
+
+  const loadNotes = (userGrade: string) => {
     try {
-      const savedPersonalNotes = localStorage.getItem("studentNotes")
-      if (savedPersonalNotes) {
-        const allPersonalNotes = JSON.parse(savedPersonalNotes)
+      // Load teacher notes for student's grade
+      const gradeNotes = dataManager.getNotesByGrade(userGrade)
+      setTeacherNotes(gradeNotes)
 
-        // Filter by current user
-        const userNotes = allPersonalNotes.filter((note: Note) => note.teacherId === currentUser?.id)
+      // Load personal notes (if any - this would be student's own notes)
+      // For now, we'll use an empty array as students don't create notes in this version
+      setPersonalNotes([])
 
-        // Sort by creation date (newest first)
-        userNotes.sort((a: Note, b: Note) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
-        console.log(`Loaded ${userNotes.length} personal notes`)
-        setPersonalNotes(userNotes)
-      } else {
-        setPersonalNotes([])
-      }
+      console.log(`Loaded ${gradeNotes.length} teacher notes for grade ${userGrade}`)
     } catch (error) {
-      console.error("Error loading personal notes:", error)
+      console.error("Error loading notes:", error)
+      setTeacherNotes([])
       setPersonalNotes([])
     }
   }
@@ -140,8 +106,9 @@ export default function StudentNotesPage() {
   const filterNotes = () => {
     // Filter teacher notes
     let filteredTeacher = teacherNotes
+
     if (searchTerm) {
-      filteredTeacher = teacherNotes.filter(
+      filteredTeacher = filteredTeacher.filter(
         (note) =>
           note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           note.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,18 +116,29 @@ export default function StudentNotesPage() {
           note.teacherName.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
+
+    if (subjectFilter !== "all") {
+      filteredTeacher = filteredTeacher.filter((note) => note.subject === subjectFilter)
+    }
+
     setFilteredTeacherNotes(filteredTeacher)
 
-    // Filter personal notes
+    // Filter personal notes (same logic)
     let filteredPersonal = personalNotes
+
     if (searchTerm) {
-      filteredPersonal = personalNotes.filter(
+      filteredPersonal = filteredPersonal.filter(
         (note) =>
           note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           note.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
           note.content.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
+
+    if (subjectFilter !== "all") {
+      filteredPersonal = filteredPersonal.filter((note) => note.subject === subjectFilter)
+    }
+
     setFilteredPersonalNotes(filteredPersonal)
   }
 
@@ -182,8 +160,23 @@ export default function StudentNotesPage() {
     }
   }
 
+  const getUniqueSubjects = () => {
+    const subjects = new Set<string>()
+    teacherNotes.forEach((note) => subjects.add(note.subject))
+    personalNotes.forEach((note) => subjects.add(note.subject))
+    return Array.from(subjects).sort()
+  }
+
+  const handleNoteClick = (noteId: string) => {
+    // Update view count when student clicks on a note
+    const note = teacherNotes.find((n) => n.id === noteId)
+    if (note) {
+      dataManager.updateNote(noteId, { views: note.views + 1 })
+    }
+  }
+
   const NoteCard = ({ note, isPersonal = false }: { note: Note; isPersonal?: boolean }) => (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleNoteClick(note.id)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -192,20 +185,16 @@ export default function StudentNotesPage() {
               <div className="flex items-center gap-2 text-sm">
                 {!isPersonal && (
                   <>
-                    <User className="h-3 w-3" />
+                    <UserIcon className="h-3 w-3" />
                     <span>{note.teacherName || "Teacher"}</span>
                     <span>•</span>
                   </>
                 )}
                 <Calendar className="h-3 w-3" />
                 <span>{formatDate(note.createdAt)}</span>
-                {note.views !== undefined && (
-                  <>
-                    <span>•</span>
-                    <Eye className="h-3 w-3" />
-                    <span>{note.views} views</span>
-                  </>
-                )}
+                <span>•</span>
+                <Eye className="h-3 w-3" />
+                <span>{note.views} views</span>
               </div>
             </CardDescription>
           </div>
@@ -224,7 +213,7 @@ export default function StudentNotesPage() {
         </p>
         <div className="flex justify-between items-center">
           <Link href={`/student/notes/${note.id}`}>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
               <BookOpen className="h-4 w-4 mr-2" />
               Read More
             </Button>
@@ -260,7 +249,7 @@ export default function StudentNotesPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Study Notes</h1>
           <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Access your personal notes and teacher resources
+            Access your study materials and teacher resources
             {currentUser?.grade && ` for Grade ${currentUser.grade}`}
           </p>
         </div>
@@ -278,16 +267,39 @@ export default function StudentNotesPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="Search notes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Search and Filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Find Notes</CardTitle>
+          <CardDescription>Search and filter your study materials</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search notes by title, content, subject, or teacher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {getUniqueSubjects().map((subject) => (
+                  <SelectItem key={subject} value={subject}>
+                    {subject}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -305,7 +317,7 @@ export default function StudentNotesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <User className="w-5 h-5 text-green-500" />
+              <UserIcon className="w-5 h-5 text-green-500" />
               <div>
                 <p className="text-sm text-gray-500">Personal Notes</p>
                 <p className="text-2xl font-bold">{filteredPersonalNotes.length}</p>
@@ -343,7 +355,7 @@ export default function StudentNotesPage() {
             Teacher Notes ({filteredTeacherNotes.length})
           </TabsTrigger>
           <TabsTrigger value="personal" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <UserIcon className="h-4 w-4" />
             My Notes ({filteredPersonalNotes.length})
           </TabsTrigger>
         </TabsList>
@@ -362,14 +374,19 @@ export default function StudentNotesPage() {
                 <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Teacher Notes Available</h3>
                 <p className="text-gray-600 mb-4">
-                  {searchTerm
+                  {searchTerm || subjectFilter !== "all"
                     ? "No teacher notes match your search criteria."
                     : `Your teachers haven't shared any notes for Grade ${currentUser?.grade || "your grade"} yet.`}
                 </p>
-                {searchTerm && (
-                  <Button variant="outline" onClick={() => setSearchTerm("")}>
-                    Clear Search
-                  </Button>
+                {(searchTerm || subjectFilter !== "all") && (
+                  <div className="flex gap-2 justify-center">
+                    <Button variant="outline" onClick={() => setSearchTerm("")}>
+                      Clear Search
+                    </Button>
+                    <Button variant="outline" onClick={() => setSubjectFilter("all")}>
+                      Clear Filter
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -390,15 +407,20 @@ export default function StudentNotesPage() {
                 <BookOpen className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Personal Notes</h3>
                 <p className="text-gray-600 mb-4">
-                  {searchTerm
+                  {searchTerm || subjectFilter !== "all"
                     ? "No personal notes match your search criteria."
                     : "You haven't created any notes yet. Start by creating your first note!"}
                 </p>
                 <div className="flex gap-2 justify-center">
-                  {searchTerm && (
-                    <Button variant="outline" onClick={() => setSearchTerm("")}>
-                      Clear Search
-                    </Button>
+                  {(searchTerm || subjectFilter !== "all") && (
+                    <>
+                      <Button variant="outline" onClick={() => setSearchTerm("")}>
+                        Clear Search
+                      </Button>
+                      <Button variant="outline" onClick={() => setSubjectFilter("all")}>
+                        Clear Filter
+                      </Button>
+                    </>
                   )}
                   <Link href="/student/notes/create">
                     <Button className="bg-green-600 hover:bg-green-700">
