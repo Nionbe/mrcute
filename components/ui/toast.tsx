@@ -108,54 +108,19 @@ interface ToastOptions {
   action?: ToastActionElement
 }
 
-let toastCount = 0
+const toastCount = 0
 
-const toast = ({ title, description, variant = "default", action }: ToastOptions) => {
-  const id = `toast-${++toastCount}`
+const toast = ({ title, description, variant = "default", ...props }: ToastOptions) => {
+  // This is a simplified implementation - in a real app you'd use a toast context
+  console.log("Toast:", { title, description, variant })
 
-  // Create toast element
-  const toastElement = document.createElement("div")
-  toastElement.id = id
-  toastElement.className = cn(toastVariants({ variant }), "fixed top-4 right-4 z-[100] w-full max-w-sm")
-
-  toastElement.innerHTML = `
-    <div class="flex flex-col space-y-1">
-      ${title ? `<div class="text-sm font-semibold">${title}</div>` : ""}
-      ${description ? `<div class="text-sm opacity-90">${description}</div>` : ""}
-    </div>
-    ${action ? `<button class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100" onclick="this.parentElement.remove()">${action}</button>` : ""}
-  `
-
-  // Add to DOM
-  document.body.appendChild(toastElement)
-
-  // Animate in
-  toastElement.style.transform = "translateX(100%)"
-  toastElement.style.transition = "transform 0.3s ease-out"
-
-  setTimeout(() => {
-    toastElement.style.transform = "translateX(0)"
-  }, 10)
-
-  // Auto remove
-  setTimeout(() => {
-    toastElement.style.transform = "translateX(100%)"
-    setTimeout(() => {
-      if (toastElement.parentElement) {
-        toastElement.remove()
-      }
-    }, 300)
-  }, 5000)
-
-  return {
-    id,
-    dismiss: () => {
-      const element = document.getElementById(id)
-      if (element) {
-        element.style.transform = "translateX(100%)"
-        setTimeout(() => element.remove(), 300)
-      }
-    },
+  // For now, we'll use a simple alert as fallback
+  if (title && description) {
+    alert(`${title}: ${description}`)
+  } else if (title) {
+    alert(title)
+  } else if (description) {
+    alert(description)
   }
 }
 
