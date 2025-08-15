@@ -150,7 +150,6 @@ export default function TeacherStudents() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <DashboardSidebar role="teacher" />
 
       <div className="flex-1 md:ml-64">
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
