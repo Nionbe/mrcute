@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import Link from "next/link"
-import { ClipboardList, Search, Tag, Clock } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { BookOpen, Search, Calendar, User, Clock, RefreshCw, Play } from "lucide-react"
+import Link from "next/link"
 
 interface Quiz {
   id: string
@@ -14,168 +14,252 @@ interface Quiz {
   description: string
   subject: string
   grade: string
-  questions: any[]
   timeLimit: number
+  questions: any[]
+  showAnswers: boolean
   createdAt: string
-  teacherName?: string
-  teacher?: string
-  completed?: boolean
+  teacherId: string
+  teacherName: string
 }
 
-export default function QuizzesPage() {
+export default function StudentQuizzesPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [userGrade, setUserGrade] = useState<string>("10")
-  const [activeTab, setActiveTab] = useState("all")
+  const [filteredQuizzes, setFilteredQuizzes] = useState<Quiz[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   useEffect(() => {
-    // Get user grade from localStorage
-    const grade = localStorage.getItem("userGrade")
-    if (grade) {
-      setUserGrade(grade)
-    }
-
-    // Load quizzes from localStorage
-    const loadQuizzes = () => {
-      try {
-        // Get teacher quizzes
-        const teacherQuizzes = localStorage.getItem("teacherQuizzes")
-        let assignedQuizzes: Quiz[] = []
-
-        if (teacherQuizzes) {
-          const allTeacherQuizzes = JSON.parse(teacherQuizzes)
-          // Filter quizzes by student's grade
-          assignedQuizzes = allTeacherQuizzes.filter((quiz: Quiz) => quiz.grade === grade)
-        }
-
-        // Get completed quizzes
-        const completedQuizzes = localStorage.getItem("completedQuizzes")
-        let completedQuizzesArray: string[] = []
-
-        if (completedQuizzes) {
-          completedQuizzesArray = JSON.parse(completedQuizzes)
-        }
-
-        // Mark completed quizzes
-        const markedQuizzes = assignedQuizzes.map((quiz) => ({
-          ...quiz,
-          completed: completedQuizzesArray.includes(quiz.id),
-        }))
-
-        setQuizzes(markedQuizzes)
-        console.log("Loaded quizzes for grade", grade, ":", markedQuizzes) // Debug log
-      } catch (error) {
-        console.error("Error loading quizzes:", error)
-        setQuizzes([])
-      }
-    }
+    // Get current user
+    const user = JSON.parse(localStorage.getItem("currentUser") || "{}")
+    setCurrentUser(user)
 
     loadQuizzes()
 
-    // Set up event listener for storage changes
-    window.addEventListener("storage", loadQuizzes)
+    // Listen for real-time updates
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "teacherQuizzes") {
+        console.log("Quizzes updated, reloading...")
+        loadQuizzes()
+      }
+    }
+
+    // Listen for custom storage events (same tab)
+    const handleCustomStorageChange = (e: any) => {
+      if (e.key === "teacherQuizzes") {
+        console.log("Quizzes updated (custom), reloading...")
+        loadQuizzes()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("storage", handleCustomStorageChange)
 
     return () => {
-      window.removeEventListener("storage", loadQuizzes)
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("storage", handleCustomStorageChange)
     }
   }, [])
 
-  // Filter quizzes based on search query and tab
-  const filteredQuizzes = quizzes.filter((quiz) => {
-    // First filter by search query
-    const matchesSearch =
-      quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quiz.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      quiz.subject.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    filterQuizzes()
+  }, [quizzes, searchTerm, currentUser])
 
-    // Then filter by tab selection
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "pending" && !quiz.completed) ||
-      (activeTab === "completed" && quiz.completed)
+  const loadQuizzes = () => {
+    try {
+      setLoading(true)
+      const savedQuizzes = localStorage.getItem("teacherQuizzes")
+      if (savedQuizzes) {
+        const allQuizzes = JSON.parse(savedQuizzes)
+        console.log("Loaded quizzes:", allQuizzes.length)
+        setQuizzes(allQuizzes)
+      } else {
+        setQuizzes([])
+      }
+    } catch (error) {
+      console.error("Error loading quizzes:", error)
+      setQuizzes([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    return matchesSearch && matchesTab
-  })
+  const filterQuizzes = () => {
+    if (!currentUser?.grade) {
+      setFilteredQuizzes([])
+      return
+    }
+
+    const filtered = quizzes.filter((quiz) => {
+      // Filter by student's grade
+      const gradeMatch = quiz.grade === currentUser.grade
+
+      // Filter by search term
+      const searchMatch =
+        searchTerm === "" ||
+        quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quiz.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quiz.description.toLowerCase().includes(searchTerm.toLowerCase())
+
+      return gradeMatch && searchMatch
+    })
+
+    // Sort by creation date (newest first)
+    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    console.log(`Filtered quizzes for ${currentUser.grade}:`, filtered.length)
+    setFilteredQuizzes(filtered)
+  }
+
+  const refreshQuizzes = () => {
+    loadQuizzes()
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+          <span>Loading quizzes...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Quizzes</h1>
-        <p className="text-gray-500">Take quizzes to test your knowledge</p>
-      </div>
-
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-          <Input
-            type="search"
-            placeholder="Search quizzes..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Tabs defaultValue="all" className="w-full md:w-auto" onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="all">All Quizzes</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {filteredQuizzes.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 p-8 text-center">
-          <ClipboardList className="mb-4 h-12 w-12 text-gray-400" />
-          <h3 className="mb-1 text-lg font-medium">No quizzes found</h3>
-          <p className="text-sm text-gray-500">
-            {searchQuery
-              ? "No quizzes match your search criteria"
-              : activeTab === "pending"
-                ? "You have no pending quizzes"
-                : activeTab === "completed"
-                  ? "You haven't completed any quizzes yet"
-                  : "No quizzes are available for your grade level"}
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Quizzes</h1>
+          <p className="text-muted-foreground">
+            Take quizzes created by your teachers
+            {currentUser?.grade && ` for ${currentUser.grade}`}
           </p>
         </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredQuizzes.map((quiz) => (
-            <Link key={quiz.id} href={`/student/quizzes/${quiz.id}`}>
-              <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="line-clamp-2">{quiz.title}</CardTitle>
-                    {quiz.completed ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        Completed
+        <Button onClick={refreshQuizzes} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <Input
+          placeholder="Search quizzes by title, subject, or description..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <BookOpen className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Available Quizzes</p>
+                <p className="text-2xl font-bold">{filteredQuizzes.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <User className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Your Grade</p>
+                <p className="text-2xl font-bold">{currentUser?.grade || "N/A"}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-purple-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">This Week</p>
+                <p className="text-2xl font-bold">
+                  {
+                    filteredQuizzes.filter((quiz) => {
+                      const quizDate = new Date(quiz.createdAt)
+                      const weekAgo = new Date()
+                      weekAgo.setDate(weekAgo.getDate() - 7)
+                      return quizDate >= weekAgo
+                    }).length
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quizzes List */}
+      <div className="grid gap-4">
+        {filteredQuizzes.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Quizzes Available</h3>
+              <p className="text-muted-foreground text-center">
+                {searchTerm
+                  ? "No quizzes match your search criteria"
+                  : `No quizzes have been created for ${currentUser?.grade || "your grade"} yet`}
+              </p>
+              {searchTerm && (
+                <Button variant="outline" onClick={() => setSearchTerm("")} className="mt-4">
+                  Clear Search
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredQuizzes.map((quiz) => (
+            <Card key={quiz.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{quiz.title}</CardTitle>
+                    <CardDescription className="mt-2">{quiz.description}</CardDescription>
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                      <Badge variant="secondary">
+                        <BookOpen className="w-3 h-3 mr-1" />
+                        {quiz.subject}
                       </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                        Pending
+                      <Badge variant="outline">
+                        <User className="w-3 h-3 mr-1" />
+                        {quiz.teacherName}
                       </Badge>
-                    )}
+                      <Badge variant="outline">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {quiz.timeLimit} min
+                      </Badge>
+                      <Badge variant="outline">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {new Date(quiz.createdAt).toLocaleDateString()}
+                      </Badge>
+                    </div>
                   </div>
-                  <CardDescription className="flex items-center">
-                    <Tag className="mr-1 h-3 w-3" />
-                    {quiz.subject}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="line-clamp-3 text-sm text-gray-500">{quiz.description}</p>
-                </CardContent>
-                <CardFooter className="flex justify-between text-xs text-gray-500">
-                  <span className="flex items-center">
-                    <Clock className="mr-1 h-3 w-3" />
-                    {quiz.timeLimit} minutes
-                  </span>
-                  <span>By: {quiz.teacherName || quiz.teacher || "Unknown Teacher"}</span>
-                </CardFooter>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+                  <div className="flex flex-col gap-2">
+                    <Link href={`/student/quizzes/${quiz.id}`}>
+                      <Button className="w-full">
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Quiz
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-muted-foreground text-center">{quiz.questions.length} questions</p>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   )
 }

@@ -189,16 +189,6 @@ export default function Login() {
               </Link>
             </p>
           </div>
-
-          <div className="mt-6 border-t pt-6">
-            <p className="text-xs text-gray-500 text-center mb-3">Demo Accounts (for testing):</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p>Student: student@safari.com / student123</p>
-              <p>Parent: parent@safari.com / parent123</p>
-              <p>Teacher: teacher@safari.com / teacher123</p>
-              <p>Admin: admin@safari.com / admin123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

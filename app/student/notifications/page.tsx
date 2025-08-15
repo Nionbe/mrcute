@@ -1,341 +1,307 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bell, Check, CheckCheck, Clock, Filter } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "@/components/ui/use-toast"
+import { Bell, BellRing, BookOpen, FileText, Calendar, Trash2, CheckCircle, RefreshCw } from "lucide-react"
 
 interface Notification {
   id: string
   title: string
   message: string
-  time: string
-  date: string
-  type: "quiz" | "note" | "grade" | "announcement"
+  type: "quiz" | "note" | "general"
   read: boolean
+  createdAt: string
+  grade?: string
+  quizTitle?: string
+  noteTitle?: string
 }
 
-export default function StudentNotifications() {
-  const [filter, setFilter] = useState<string>("all")
+export default function StudentNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
-  // Load notifications from localStorage or use default ones if not available
   useEffect(() => {
-    // Load notifications from localStorage or use default ones if not available
-    const savedNotifications = localStorage.getItem("studentNotifications")
-    const userId = localStorage.getItem("userId")
+    // Get current user
+    const user = JSON.parse(localStorage.getItem("currentUser") || "{}")
+    setCurrentUser(user)
 
-    if (savedNotifications) {
-      try {
-        const parsedNotifications = JSON.parse(savedNotifications)
-        setNotifications(parsedNotifications)
-      } catch (error) {
-        console.error("Error parsing notifications:", error)
-        setNotifications(getDefaultNotifications())
+    loadNotifications()
+
+    // Listen for real-time notification updates
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "studentNotifications") {
+        console.log("Notifications updated, reloading...")
+        loadNotifications()
       }
-    } else {
-      // Default notifications if none are saved
-      const defaultNotifications = getDefaultNotifications()
-      setNotifications(defaultNotifications)
-      localStorage.setItem("studentNotifications", JSON.stringify(defaultNotifications))
+    }
+
+    // Listen for custom storage events (same tab)
+    const handleCustomStorageChange = (e: any) => {
+      if (e.key === "studentNotifications") {
+        console.log("Notifications updated (custom), reloading...")
+        loadNotifications()
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("storage", handleCustomStorageChange)
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("storage", handleCustomStorageChange)
     }
   }, [])
 
-  // Add a function to get default notifications
-  const getDefaultNotifications = (): Notification[] => {
-    return [
-      {
-        id: "1",
-        title: "New Quiz Available",
-        message: "A new Mathematics quiz has been assigned to you. Complete it before Friday.",
-        time: "10:30 AM",
-        date: "Today",
-        type: "quiz",
-        read: false,
-      },
-      {
-        id: "2",
-        title: "Grade Posted",
-        message: "Your Science quiz grade has been posted. You scored 85%.",
-        time: "Yesterday",
-        date: "Apr 12, 2025",
-        type: "grade",
-        read: false,
-      },
-      {
-        id: "3",
-        title: "New Study Material",
-        message: "New study notes for History chapter 5 have been uploaded.",
-        time: "2 days ago",
-        date: "Apr 11, 2025",
-        type: "note",
-        read: false,
-      },
-      {
-        id: "4",
-        title: "Upcoming Test Reminder",
-        message: "Don't forget about your English test next Monday.",
-        time: "3 days ago",
-        date: "Apr 10, 2025",
-        type: "announcement",
-        read: false,
-      },
-      {
-        id: "5",
-        title: "Parent-Teacher Meeting",
-        message: "Parent-teacher meetings are scheduled for next week. Please inform your parents.",
-        time: "1 week ago",
-        date: "Apr 6, 2025",
-        type: "announcement",
-        read: false,
-      },
-    ]
+  const loadNotifications = () => {
+    try {
+      setLoading(true)
+      const savedNotifications = localStorage.getItem("studentNotifications")
+      if (savedNotifications) {
+        const allNotifications = JSON.parse(savedNotifications)
+
+        // Filter notifications for current user's grade
+        const userGrade = JSON.parse(localStorage.getItem("currentUser") || "{}").grade
+        const filteredNotifications = allNotifications.filter(
+          (notif: Notification) => !notif.grade || notif.grade === userGrade,
+        )
+
+        // Sort by creation date (newest first)
+        filteredNotifications.sort(
+          (a: Notification, b: Notification) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+
+        console.log("Loaded notifications:", filteredNotifications.length)
+        setNotifications(filteredNotifications)
+      } else {
+        setNotifications([])
+      }
+    } catch (error) {
+      console.error("Error loading notifications:", error)
+      setNotifications([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Save notifications to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("studentNotifications", JSON.stringify(notifications))
-  }, [notifications])
+  const markAsRead = (notificationId: string) => {
+    try {
+      const updatedNotifications = notifications.map((notif) =>
+        notif.id === notificationId ? { ...notif, read: true } : notif,
+      )
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) => (notification.id === id ? { ...notification, read: true } : notification)),
-    )
+      // Update local state
+      setNotifications(updatedNotifications)
 
-    toast({
-      title: "Notification marked as read",
-      description: "This notification has been marked as read.",
-    })
+      // Update localStorage with all notifications (not just filtered ones)
+      const allNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const updatedAllNotifications = allNotifications.map((notif: Notification) =>
+        notif.id === notificationId ? { ...notif, read: true } : notif,
+      )
+
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedAllNotifications))
+    } catch (error) {
+      console.error("Error marking notification as read:", error)
+    }
   }
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })))
+    try {
+      const updatedNotifications = notifications.map((notif) => ({ ...notif, read: true }))
+      setNotifications(updatedNotifications)
 
-    toast({
-      title: "All notifications marked as read",
-      description: "All notifications have been marked as read.",
-    })
+      // Update localStorage
+      const allNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const updatedAllNotifications = allNotifications.map((notif: Notification) => ({ ...notif, read: true }))
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedAllNotifications))
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error)
+    }
   }
 
-  const getFilteredNotifications = () => {
-    if (filter === "all") return notifications
-    if (filter === "unread") return notifications.filter((n) => !n.read)
-    return notifications.filter((n) => n.type === filter)
+  const deleteNotification = (notificationId: string) => {
+    try {
+      const updatedNotifications = notifications.filter((notif) => notif.id !== notificationId)
+      setNotifications(updatedNotifications)
+
+      // Update localStorage
+      const allNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const updatedAllNotifications = allNotifications.filter((notif: Notification) => notif.id !== notificationId)
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedAllNotifications))
+    } catch (error) {
+      console.error("Error deleting notification:", error)
+    }
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "quiz":
+        return <BookOpen className="w-5 h-5 text-blue-500" />
+      case "note":
+        return <FileText className="w-5 h-5 text-green-500" />
+      default:
+        return <Bell className="w-5 h-5 text-gray-500" />
+    }
+  }
+
+  const refreshNotifications = () => {
+    loadNotifications()
+  }
+
+  const unreadCount = notifications.filter((notif) => !notif.read).length
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+          <span>Loading notifications...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <DashboardSidebar role="student" />
-
-      <div className="flex-1 md:ml-64">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
-          <h1 className="text-lg font-bold md:text-xl">Notifications</h1>
-          <div className="flex items-center gap-2">
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Notifications</SelectItem>
-                <SelectItem value="unread">Unread</SelectItem>
-                <SelectItem value="quiz">Quizzes</SelectItem>
-                <SelectItem value="grade">Grades</SelectItem>
-                <SelectItem value="note">Study Materials</SelectItem>
-                <SelectItem value="announcement">Announcements</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <BellRing className="w-8 h-8" />
+            Notifications
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {unreadCount}
+              </Badge>
+            )}
+          </h1>
+          <p className="text-muted-foreground">Stay updated with the latest announcements and content</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={refreshNotifications} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+          {unreadCount > 0 && (
+            <Button onClick={markAllAsRead} variant="outline">
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Mark All Read
             </Button>
-          </div>
-        </header>
+          )}
+        </div>
+      </div>
 
-        <main className="p-4 md:p-6">
-          <Tabs defaultValue="all">
-            <TabsList className="mb-6">
-              <TabsTrigger value="all">
-                All
-                {unreadCount > 0 && (
-                  <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-600">
-                    {unreadCount} new
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="unread">Unread</TabsTrigger>
-            </TabsList>
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Bell className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{notifications.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <BellRing className="w-5 h-5 text-red-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Unread</p>
+                <p className="text-2xl font-bold">{unreadCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Calendar className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Today</p>
+                <p className="text-2xl font-bold">
+                  {
+                    notifications.filter((notif) => {
+                      const notifDate = new Date(notif.createdAt)
+                      const today = new Date()
+                      return notifDate.toDateString() === today.toDateString()
+                    }).length
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <TabsContent value="all">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>All Notifications</CardTitle>
-                      <CardDescription>View all your notifications</CardDescription>
+      {/* Notifications List */}
+      <div className="space-y-4">
+        {notifications.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Bell className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Notifications</h3>
+              <p className="text-muted-foreground text-center">
+                You're all caught up! New notifications will appear here.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          notifications.map((notification) => (
+            <Card
+              key={notification.id}
+              className={`transition-all ${
+                !notification.read ? "border-blue-200 bg-blue-50/50 shadow-md" : "hover:shadow-md"
+              }`}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    {getNotificationIcon(notification.type)}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-base">{notification.title}</CardTitle>
+                        {!notification.read && (
+                          <Badge variant="destructive" className="text-xs">
+                            New
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {notification.type}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-sm">{notification.message}</CardDescription>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {new Date(notification.createdAt).toLocaleString()}
+                        </Badge>
+                        {notification.grade && (
+                          <Badge variant="outline" className="text-xs">
+                            {notification.grade}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    {unreadCount > 0 && (
-                      <Button variant="outline" onClick={markAllAsRead}>
-                        <Check className="mr-2 h-4 w-4" />
-                        Mark all as read
+                  </div>
+                  <div className="flex gap-1">
+                    {!notification.read && (
+                      <Button variant="outline" size="sm" onClick={() => markAsRead(notification.id)}>
+                        <CheckCircle className="w-4 h-4" />
                       </Button>
                     )}
+                    <Button variant="outline" size="sm" onClick={() => deleteNotification(notification.id)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {getFilteredNotifications().length > 0 ? (
-                    <div className="space-y-4">
-                      {getFilteredNotifications().map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`rounded-lg border p-4 transition-colors ${
-                            notification.read ? "bg-white" : "bg-green-50 border-green-200"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`mt-0.5 rounded-full p-1.5 ${
-                                  notification.type === "quiz"
-                                    ? "bg-blue-100 text-blue-600"
-                                    : notification.type === "grade"
-                                      ? "bg-green-100 text-green-600"
-                                      : notification.type === "note"
-                                        ? "bg-purple-100 text-purple-600"
-                                        : "bg-orange-100 text-orange-600"
-                                }`}
-                              >
-                                {notification.type === "quiz" ? (
-                                  <Clock className="h-4 w-4" />
-                                ) : notification.type === "grade" ? (
-                                  <Check className="h-4 w-4" />
-                                ) : notification.type === "note" ? (
-                                  <Bell className="h-4 w-4" />
-                                ) : (
-                                  <Bell className="h-4 w-4" />
-                                )}
-                              </div>
-                              <div>
-                                <h3 className="font-medium">{notification.title}</h3>
-                                <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-                                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                                  <span>{notification.date}</span>
-                                  <span>•</span>
-                                  <span>{notification.time}</span>
-                                </div>
-                              </div>
-                            </div>
-                            {!notification.read && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-green-600"
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                <CheckCheck className="mr-1 h-4 w-4" />
-                                Mark as read
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <Bell className="mb-4 h-12 w-12 text-gray-300" />
-                      <h3 className="text-lg font-medium">No notifications</h3>
-                      <p className="text-gray-500">You're all caught up!</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="unread">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Unread Notifications</CardTitle>
-                      <CardDescription>View your unread notifications</CardDescription>
-                    </div>
-                    {unreadCount > 0 && (
-                      <Button variant="outline" onClick={markAllAsRead}>
-                        <Check className="mr-2 h-4 w-4" />
-                        Mark all as read
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {notifications.filter((n) => !n.read).length > 0 ? (
-                    <div className="space-y-4">
-                      {notifications
-                        .filter((n) => !n.read)
-                        .map((notification) => (
-                          <div key={notification.id} className="rounded-lg border border-green-200 bg-green-50 p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3">
-                                <div
-                                  className={`mt-0.5 rounded-full p-1.5 ${
-                                    notification.type === "quiz"
-                                      ? "bg-blue-100 text-blue-600"
-                                      : notification.type === "grade"
-                                        ? "bg-green-100 text-green-600"
-                                        : notification.type === "note"
-                                          ? "bg-purple-100 text-purple-600"
-                                          : "bg-orange-100 text-orange-600"
-                                  }`}
-                                >
-                                  {notification.type === "quiz" ? (
-                                    <Clock className="h-4 w-4" />
-                                  ) : notification.type === "grade" ? (
-                                    <Check className="h-4 w-4" />
-                                  ) : notification.type === "note" ? (
-                                    <Bell className="h-4 w-4" />
-                                  ) : (
-                                    <Bell className="h-4 w-4" />
-                                  )}
-                                </div>
-                                <div>
-                                  <h3 className="font-medium">{notification.title}</h3>
-                                  <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-                                  <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                                    <span>{notification.date}</span>
-                                    <span>•</span>
-                                    <span>{notification.time}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 text-green-600"
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                <CheckCheck className="mr-1 h-4 w-4" />
-                                Mark as read
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12">
-                      <CheckCheck className="mb-4 h-12 w-12 text-gray-300" />
-                      <h3 className="text-lg font-medium">No unread notifications</h3>
-                      <p className="text-gray-500">You're all caught up!</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </main>
+                </div>
+              </CardHeader>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   )

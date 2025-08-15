@@ -1,550 +1,428 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Minus, ArrowLeft, Save } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "@/components/ui/use-toast"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Trash2, Save, ArrowLeft } from "lucide-react"
+import { toast } from "@/components/ui/toast"
+
+interface Question {
+  id: string
+  question: string
+  options: string[]
+  correctAnswer: number
+  explanation?: string
+}
+
+interface Quiz {
+  id: string
+  title: string
+  description: string
+  subject: string
+  grade: string
+  timeLimit: number
+  questions: Question[]
+  showAnswers: boolean
+  createdAt: string
+  teacherId: string
+  teacherName: string
+}
 
 export default function CreateQuizPage() {
   const router = useRouter()
-  const [teacherInfo, setTeacherInfo] = useState({
-    name: "Loading...",
-    subject: "Mathematics",
-    grade: "10",
-    teacherId: "Loading...",
-  })
-
-  const [quizData, setQuizData] = useState({
+  const [quiz, setQuiz] = useState<Partial<Quiz>>({
     title: "",
     description: "",
-    subject: "Mathematics",
-    grade: "10",
+    subject: "",
+    grade: "",
     timeLimit: 30,
-    showAnswersAfterCompletion: true,
-    showCorrectAnswers: true,
-    allowRetakes: false,
-    randomizeQuestions: false,
-    questions: [
-      {
-        id: 1,
-        text: "",
-        type: "multiple-choice",
-        options: ["", "", "", ""],
-        correctAnswer: 0,
-        explanation: "",
-      },
-    ],
+    questions: [],
+    showAnswers: true,
   })
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
+  const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({
+    question: "",
+    options: ["", "", "", ""],
+    correctAnswer: 0,
+    explanation: "",
+  })
 
-    const userName = localStorage.getItem("userName") || "Teacher"
-    const userId = localStorage.getItem("userId") || "TA789012"
-    const userSubject = localStorage.getItem("userSubject") || "Mathematics"
-    const userGrade = localStorage.getItem("userGrade") || "10"
+  const subjects = [
+    "Mathematics",
+    "English",
+    "Science",
+    "History",
+    "Geography",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "Computer Science",
+    "Art",
+  ]
 
-    setTeacherInfo({
-      name: userName,
-      subject: userSubject,
-      grade: userGrade,
-      teacherId: userId,
-    })
+  const grades = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`)
 
-    setQuizData((prev) => ({
-      ...prev,
-      subject: userSubject,
-      grade: userGrade,
-    }))
-  }, [])
+  const addStudentNotification = (quizTitle: string, quizGrade: string) => {
+    try {
+      const existingNotifications = JSON.parse(localStorage.getItem("studentNotifications") || "[]")
+      const newNotification = {
+        id: Date.now().toString(),
+        title: "New Quiz Available",
+        message: `Your teacher has created a new quiz: "${quizTitle}" for ${quizGrade}`,
+        type: "quiz",
+        read: false,
+        createdAt: new Date().toISOString(),
+        grade: quizGrade,
+        quizTitle,
+      }
 
-  const handleQuizDataChange = (e) => {
-    const { name, value } = e.target
-    setQuizData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
+      const updatedNotifications = [newNotification, ...existingNotifications]
+      localStorage.setItem("studentNotifications", JSON.stringify(updatedNotifications))
 
-  const handleSwitchChange = (field: string, checked: boolean) => {
-    setQuizData((prev) => ({
-      ...prev,
-      [field]: checked,
-    }))
-  }
-
-  const handleQuestionChange = (questionId, field, value) => {
-    setQuizData((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              [field]: value,
-            }
-          : q,
-      ),
-    }))
-  }
-
-  const handleOptionChange = (questionId, optionIndex, value) => {
-    setQuizData((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              options: q.options.map((opt, idx) => (idx === optionIndex ? value : opt)),
-            }
-          : q,
-      ),
-    }))
-  }
-
-  const handleCorrectAnswerChange = (questionId, value) => {
-    setQuizData((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q) =>
-        q.id === questionId
-          ? {
-              ...q,
-              correctAnswer: Number.parseInt(value),
-            }
-          : q,
-      ),
-    }))
+      // Trigger notification update
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "studentNotifications",
+          newValue: JSON.stringify(updatedNotifications),
+        }),
+      )
+    } catch (error) {
+      console.error("Error adding student notification:", error)
+    }
   }
 
   const addQuestion = () => {
-    const newQuestionId = quizData.questions.length > 0 ? Math.max(...quizData.questions.map((q) => q.id)) + 1 : 1
-    setQuizData((prev) => ({
+    if (!currentQuestion.question?.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a question",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const validOptions = currentQuestion.options?.filter((opt) => opt.trim()) || []
+    if (validOptions.length < 2) {
+      toast({
+        title: "Error",
+        description: "Please provide at least 2 options",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const newQuestion: Question = {
+      id: Date.now().toString(),
+      question: currentQuestion.question!,
+      options: currentQuestion.options!,
+      correctAnswer: currentQuestion.correctAnswer!,
+      explanation: currentQuestion.explanation,
+    }
+
+    setQuiz((prev) => ({
       ...prev,
-      questions: [
-        ...prev.questions,
-        {
-          id: newQuestionId,
-          text: "",
-          type: "multiple-choice",
-          options: ["", "", "", ""],
-          correctAnswer: 0,
-          explanation: "",
-        },
-      ],
+      questions: [...(prev.questions || []), newQuestion],
     }))
-  }
 
-  const removeQuestion = (questionId) => {
-    if (quizData.questions.length <= 1) {
-      toast({
-        title: "Cannot remove question",
-        description: "A quiz must have at least one question.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setQuizData((prev) => ({
-      ...prev,
-      questions: prev.questions.filter((q) => q.id !== questionId),
-    }))
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-
-    if (!quizData.title.trim()) {
-      toast({
-        title: "Missing title",
-        description: "Please provide a title for the quiz.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!quizData.description.trim()) {
-      toast({
-        title: "Missing description",
-        description: "Please provide a description for the quiz.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    for (const question of quizData.questions) {
-      if (!question.text.trim()) {
-        toast({
-          title: "Incomplete question",
-          description: "Please provide text for all questions.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      if (question.type === "multiple-choice") {
-        for (const option of question.options) {
-          if (!option.trim()) {
-            toast({
-              title: "Incomplete options",
-              description: "Please provide text for all options in multiple choice questions.",
-              variant: "destructive",
-            })
-            return
-          }
-        }
-      }
-    }
-
-    const newQuiz = {
-      id: `quiz-${Date.now()}`,
-      title: quizData.title,
-      description: quizData.description,
-      subject: quizData.subject,
-      grade: quizData.grade,
-      timeLimit: Number.parseInt(quizData.timeLimit),
-      showAnswersAfterCompletion: quizData.showAnswersAfterCompletion,
-      showCorrectAnswers: quizData.showCorrectAnswers,
-      allowRetakes: quizData.allowRetakes,
-      randomizeQuestions: quizData.randomizeQuestions,
-      questions: quizData.questions,
-      createdAt: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      teacherName: teacherInfo.name,
-      teacherId: teacherInfo.teacherId,
-    }
-
-    if (typeof window !== "undefined") {
-      const existingQuizzes = JSON.parse(localStorage.getItem("teacherQuizzes") || "[]")
-      localStorage.setItem("teacherQuizzes", JSON.stringify([newQuiz, ...existingQuizzes]))
-      localStorage.setItem("newlyCreatedQuiz", JSON.stringify(newQuiz))
-    }
-
-    toast({
-      title: "Quiz created",
-      description: `Your quiz has been successfully created and shared with Grade ${quizData.grade} students.`,
+    // Reset current question
+    setCurrentQuestion({
+      question: "",
+      options: ["", "", "", ""],
+      correctAnswer: 0,
+      explanation: "",
     })
 
-    router.push("/teacher/quizzes")
+    toast({
+      title: "Success",
+      description: "Question added successfully",
+    })
+  }
+
+  const removeQuestion = (questionId: string) => {
+    setQuiz((prev) => ({
+      ...prev,
+      questions: prev.questions?.filter((q) => q.id !== questionId) || [],
+    }))
+  }
+
+  const saveQuiz = () => {
+    if (!quiz.title?.trim() || !quiz.subject || !quiz.grade) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!quiz.questions?.length) {
+      toast({
+        title: "Error",
+        description: "Please add at least one question",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}")
+
+    const newQuiz: Quiz = {
+      id: Date.now().toString(),
+      title: quiz.title!,
+      description: quiz.description || "",
+      subject: quiz.subject!,
+      grade: quiz.grade!,
+      timeLimit: quiz.timeLimit || 30,
+      questions: quiz.questions!,
+      showAnswers: quiz.showAnswers || false,
+      createdAt: new Date().toISOString(),
+      teacherId: currentUser.id || "teacher1",
+      teacherName: currentUser.name || "Teacher",
+    }
+
+    try {
+      const existingQuizzes = JSON.parse(localStorage.getItem("teacherQuizzes") || "[]")
+      const updatedQuizzes = [newQuiz, ...existingQuizzes]
+      localStorage.setItem("teacherQuizzes", JSON.stringify(updatedQuizzes))
+
+      // Add notification for students
+      addStudentNotification(quiz.title!, quiz.grade!)
+
+      // Trigger real-time update
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "teacherQuizzes",
+          newValue: JSON.stringify(updatedQuizzes),
+        }),
+      )
+
+      toast({
+        title: "Success",
+        description: "Quiz created and students have been notified!",
+      })
+
+      router.push("/teacher/quizzes")
+    } catch (error) {
+      console.error("Error saving quiz:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save quiz",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white px-4 md:px-6 shadow-sm">
-        <div className="flex items-center">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-bold md:text-xl">Create New Quiz</h1>
-        </div>
-        <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
-          <Save className="mr-2 h-4 w-4" />
-          Save Quiz
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
         </Button>
-      </header>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">Create Quiz</h1>
+          <p className="text-muted-foreground">Create a new quiz for your students</p>
+        </div>
+      </div>
 
-      <main className="mx-auto max-w-4xl p-4 md:p-6">
-        <form onSubmit={handleSubmit}>
-          <Card className="mb-6 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle>Quiz Details</CardTitle>
-              <CardDescription>Provide basic information about your quiz</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="details">
-                <TabsList className="grid w-full grid-cols-3 mb-4">
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="settings">Settings</TabsTrigger>
-                  <TabsTrigger value="visibility">Answer Visibility</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="details" className="space-y-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Quiz Title</Label>
-                    <Input
-                      id="title"
-                      name="title"
-                      value={quizData.title}
-                      onChange={handleQuizDataChange}
-                      placeholder="Enter quiz title"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      value={quizData.description}
-                      onChange={handleQuizDataChange}
-                      placeholder="Enter quiz description"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="subject">Subject</Label>
-                      <Select
-                        value={quizData.subject}
-                        onValueChange={(value) => setQuizData((prev) => ({ ...prev, subject: value }))}
-                      >
-                        <SelectTrigger id="subject">
-                          <SelectValue placeholder="Select subject" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="English">English</SelectItem>
-                          <SelectItem value="Mathematics">Mathematics</SelectItem>
-                          <SelectItem value="General Science">General Science</SelectItem>
-                          <SelectItem value="Biology">Biology</SelectItem>
-                          <SelectItem value="Chemistry">Chemistry</SelectItem>
-                          <SelectItem value="Physics">Physics</SelectItem>
-                          <SelectItem value="Geography">Geography</SelectItem>
-                          <SelectItem value="History">History</SelectItem>
-                          <SelectItem value="Civics and Ethical Education">Civics and Ethical Education</SelectItem>
-                          <SelectItem value="Economics">Economics</SelectItem>
-                          <SelectItem value="Information Technology (ICT)">Information Technology (ICT)</SelectItem>
-                          <SelectItem value="Moral and Civic Education">Moral and Civic Education</SelectItem>
-                          <SelectItem value="Physical Education (P.E.)">Physical Education (P.E.)</SelectItem>
-                          <SelectItem value="Agriculture">Agriculture</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="grade">Grade Level</Label>
-                      <Select
-                        value={quizData.grade}
-                        onValueChange={(value) => setQuizData((prev) => ({ ...prev, grade: value }))}
-                      >
-                        <SelectTrigger id="grade">
-                          <SelectValue placeholder="Select grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Grade 1</SelectItem>
-                          <SelectItem value="2">Grade 2</SelectItem>
-                          <SelectItem value="3">Grade 3</SelectItem>
-                          <SelectItem value="4">Grade 4</SelectItem>
-                          <SelectItem value="5">Grade 5</SelectItem>
-                          <SelectItem value="6">Grade 6</SelectItem>
-                          <SelectItem value="7">Grade 7</SelectItem>
-                          <SelectItem value="8">Grade 8</SelectItem>
-                          <SelectItem value="9">Grade 9</SelectItem>
-                          <SelectItem value="10">Grade 10</SelectItem>
-                          <SelectItem value="11">Grade 11</SelectItem>
-                          <SelectItem value="12">Grade 12</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
-                      <Input
-                        id="timeLimit"
-                        name="timeLimit"
-                        type="number"
-                        min="1"
-                        max="120"
-                        value={quizData.timeLimit}
-                        onChange={handleQuizDataChange}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="settings" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Allow Retakes</Label>
-                        <p className="text-sm text-gray-500">Allow students to retake this quiz</p>
-                      </div>
-                      <Switch
-                        checked={quizData.allowRetakes}
-                        onCheckedChange={(checked) => handleSwitchChange("allowRetakes", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Randomize Questions</Label>
-                        <p className="text-sm text-gray-500">Show questions in random order</p>
-                      </div>
-                      <Switch
-                        checked={quizData.randomizeQuestions}
-                        onCheckedChange={(checked) => handleSwitchChange("randomizeQuestions", checked)}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="visibility" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Show Answers After Completion</Label>
-                        <p className="text-sm text-gray-500">Display quiz results immediately after submission</p>
-                      </div>
-                      <Switch
-                        checked={quizData.showAnswersAfterCompletion}
-                        onCheckedChange={(checked) => handleSwitchChange("showAnswersAfterCompletion", checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Show Correct Answers</Label>
-                        <p className="text-sm text-gray-500">Show which answers were correct/incorrect</p>
-                      </div>
-                      <Switch
-                        checked={quizData.showCorrectAnswers}
-                        onCheckedChange={(checked) => handleSwitchChange("showCorrectAnswers", checked)}
-                        disabled={!quizData.showAnswersAfterCompletion}
-                      />
-                    </div>
-                    {!quizData.showAnswersAfterCompletion && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <p className="text-sm text-yellow-800">
-                          When "Show Answers After Completion" is disabled, students will only see their score without
-                          detailed feedback.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-bold">Questions</h2>
-            <Button type="button" onClick={addQuestion} className="bg-green-600 hover:bg-green-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Question
-            </Button>
+      {/* Quiz Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quiz Details</CardTitle>
+          <CardDescription>Basic information about your quiz</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Quiz Title *</Label>
+              <Input
+                id="title"
+                value={quiz.title}
+                onChange={(e) => setQuiz((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter quiz title"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
+              <Input
+                id="timeLimit"
+                type="number"
+                value={quiz.timeLimit}
+                onChange={(e) => setQuiz((prev) => ({ ...prev, timeLimit: Number.parseInt(e.target.value) }))}
+                min="1"
+                max="180"
+              />
+            </div>
           </div>
 
-          {quizData.questions.map((question, questionIndex) => (
-            <Card key={question.id} className="mb-6 shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Question {questionIndex + 1}</CardTitle>
-                  <CardDescription>
-                    {question.type === "multiple-choice" ? "Multiple Choice" : "True/False"}
-                  </CardDescription>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeQuestion(question.id)}
-                  className="h-8 w-8 text-red-500"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor={`question-${question.id}`}>Question Text</Label>
-                  <Textarea
-                    id={`question-${question.id}`}
-                    value={question.text}
-                    onChange={(e) => handleQuestionChange(question.id, "text", e.target.value)}
-                    placeholder="Enter question text"
-                    rows={2}
-                  />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject *</Label>
+              <Select value={quiz.subject} onValueChange={(value) => setQuiz((prev) => ({ ...prev, subject: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject} value={subject}>
+                      {subject}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="grade">Grade Level *</Label>
+              <Select value={quiz.grade} onValueChange={(value) => setQuiz((prev) => ({ ...prev, grade: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {grades.map((grade) => (
+                    <SelectItem key={grade} value={grade}>
+                      {grade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-                <div className="grid gap-2">
-                  <Label>Question Type</Label>
-                  <Select
-                    value={question.type}
-                    onValueChange={(value) => handleQuestionChange(question.id, "type", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                      <SelectItem value="true-false">True/False</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={quiz.description}
+              onChange={(e) => setQuiz((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="Enter quiz description (optional)"
+              rows={3}
+            />
+          </div>
 
-                {question.type === "multiple-choice" ? (
-                  <div className="space-y-4">
-                    <Label>Options</Label>
-                    {question.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center gap-2">
-                        <RadioGroup
-                          value={question.correctAnswer.toString()}
-                          onValueChange={(value) => handleCorrectAnswerChange(question.id, value)}
-                          className="flex items-center"
-                        >
-                          <RadioGroupItem value={optionIndex.toString()} id={`q${question.id}-opt${optionIndex}`} />
-                        </RadioGroup>
-                        <Input
-                          value={option}
-                          onChange={(e) => handleOptionChange(question.id, optionIndex, e.target.value)}
-                          placeholder={`Option ${optionIndex + 1}`}
-                          className="flex-1"
-                        />
-                      </div>
-                    ))}
-                    <p className="text-xs text-gray-500">Select the radio button next to the correct answer</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Correct Answer</Label>
-                    <RadioGroup
-                      value={question.correctAnswer.toString()}
-                      onValueChange={(value) => handleCorrectAnswerChange(question.id, value)}
-                      className="flex flex-col space-y-2"
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="showAnswers"
+              checked={quiz.showAnswers}
+              onCheckedChange={(checked) => setQuiz((prev) => ({ ...prev, showAnswers: checked as boolean }))}
+            />
+            <Label htmlFor="showAnswers">Show correct answers after completion</Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add Question */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Question</CardTitle>
+          <CardDescription>Create questions for your quiz</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="question">Question</Label>
+            <Textarea
+              id="question"
+              value={currentQuestion.question}
+              onChange={(e) => setCurrentQuestion((prev) => ({ ...prev, question: e.target.value }))}
+              placeholder="Enter your question"
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <Label>Answer Options</Label>
+            {currentQuestion.options?.map((option, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Checkbox
+                  checked={currentQuestion.correctAnswer === index}
+                  onCheckedChange={() => setCurrentQuestion((prev) => ({ ...prev, correctAnswer: index }))}
+                />
+                <Input
+                  value={option}
+                  onChange={(e) => {
+                    const newOptions = [...(currentQuestion.options || [])]
+                    newOptions[index] = e.target.value
+                    setCurrentQuestion((prev) => ({ ...prev, options: newOptions }))
+                  }}
+                  placeholder={`Option ${index + 1}`}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="explanation">Explanation (Optional)</Label>
+            <Textarea
+              id="explanation"
+              value={currentQuestion.explanation}
+              onChange={(e) => setCurrentQuestion((prev) => ({ ...prev, explanation: e.target.value }))}
+              placeholder="Explain why this is the correct answer"
+              rows={2}
+            />
+          </div>
+
+          <Button onClick={addQuestion} className="w-full">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Question
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Questions List */}
+      {quiz.questions && quiz.questions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Questions ({quiz.questions.length})</CardTitle>
+            <CardDescription>Review your quiz questions</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {quiz.questions.map((question, index) => (
+              <div key={question.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <Badge variant="outline">Question {index + 1}</Badge>
+                  <Button variant="outline" size="sm" onClick={() => removeQuestion(question.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="font-medium mb-2">{question.question}</p>
+                <div className="space-y-1">
+                  {question.options.map((option, optIndex) => (
+                    <div
+                      key={optIndex}
+                      className={`text-sm p-2 rounded ${
+                        optIndex === question.correctAnswer ? "bg-green-100 text-green-800" : "bg-gray-50"
+                      }`}
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="0" id={`q${question.id}-true`} />
-                        <Label htmlFor={`q${question.id}-true`}>True</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="1" id={`q${question.id}-false`} />
-                        <Label htmlFor={`q${question.id}-false`}>False</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                )}
-
-                <div className="grid gap-2">
-                  <Label htmlFor={`explanation-${question.id}`}>Explanation (Optional)</Label>
-                  <Textarea
-                    id={`explanation-${question.id}`}
-                    value={question.explanation}
-                    onChange={(e) => handleQuestionChange(question.id, "explanation", e.target.value)}
-                    placeholder="Provide an explanation for the correct answer"
-                    rows={2}
-                  />
-                  <p className="text-xs text-gray-500">
-                    This will be shown to students if answer visibility is enabled
-                  </p>
+                      {optIndex === question.correctAnswer && "✓ "}
+                      {option}
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                {question.explanation && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    <strong>Explanation:</strong> {question.explanation}
+                  </p>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
-          <div className="mt-6 flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
-              <Save className="mr-2 h-4 w-4" />
-              Save Quiz
-            </Button>
-          </div>
-        </form>
-      </main>
+      {/* Save Quiz */}
+      <div className="flex justify-end">
+        <Button onClick={saveQuiz} size="lg">
+          <Save className="w-4 h-4 mr-2" />
+          Create Quiz
+        </Button>
+      </div>
     </div>
   )
 }
