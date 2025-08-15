@@ -15,9 +15,12 @@ interface Note {
   content: string
   subject: string
   grade: string
-  createdAt: string
+  date: string
+  createdAt?: string
   createdBy?: string
   teacherName?: string
+  teacher?: string
+  views?: number
 }
 
 export default function NotesPage() {
@@ -37,24 +40,28 @@ export default function NotesPage() {
     const loadNotes = () => {
       try {
         // Load student's personal notes
-        const storedNotes = localStorage.getItem("studentNotes")
+        const storedPersonalNotes = localStorage.getItem("studentNotes")
         let personalNotes: Note[] = []
 
-        if (storedNotes) {
-          personalNotes = JSON.parse(storedNotes)
+        if (storedPersonalNotes) {
+          personalNotes = JSON.parse(storedPersonalNotes)
         }
 
-        // Load teacher's notes
+        // Load teacher's notes (shared with students)
         const teacherNotes = localStorage.getItem("teacherNotes")
         let classNotes: Note[] = []
 
         if (teacherNotes) {
-          classNotes = JSON.parse(teacherNotes)
+          const allTeacherNotes = JSON.parse(teacherNotes)
+          // Filter teacher notes by student's grade
+          classNotes = allTeacherNotes.filter((note: Note) => note.grade === grade)
         }
 
         // Combine both types of notes
         const allNotes = [...personalNotes, ...classNotes]
         setNotes(allNotes)
+
+        console.log("Loaded notes:", allNotes) // Debug log
       } catch (error) {
         console.error("Error loading notes:", error)
         setNotes([])
@@ -82,15 +89,10 @@ export default function NotesPage() {
     // Then filter by tab selection
     const matchesTab =
       activeTab === "all" ||
-      (activeTab === "personal" && !note.teacherName) ||
-      (activeTab === "class" && note.teacherName)
+      (activeTab === "personal" && !note.teacherName && !note.teacher) ||
+      (activeTab === "class" && (note.teacherName || note.teacher))
 
-    // Then filter by grade - teacher notes should match student's grade
-    const matchesGrade =
-      !note.teacherName || // Personal notes don't need grade matching
-      (note.teacherName && note.grade === userGrade.toString()) // Teacher notes must match grade
-
-    return matchesSearch && matchesTab && matchesGrade
+    return matchesSearch && matchesTab
   })
 
   return (
@@ -158,7 +160,7 @@ export default function NotesPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="line-clamp-2">{note.title}</CardTitle>
-                    {note.teacherName && (
+                    {(note.teacherName || note.teacher) && (
                       <Badge variant="outline" className="bg-green-50 text-green-700">
                         Class Note
                       </Badge>
@@ -173,8 +175,10 @@ export default function NotesPage() {
                   <p className="line-clamp-3 text-sm text-gray-500">{note.content}</p>
                 </CardContent>
                 <CardFooter className="flex justify-between text-xs text-gray-500">
-                  <span>{note.teacherName ? `By: ${note.teacherName}` : "Personal Note"}</span>
-                  <span>{new Date(note.createdAt).toLocaleDateString()}</span>
+                  <span>
+                    {note.teacherName || note.teacher ? `By: ${note.teacherName || note.teacher}` : "Personal Note"}
+                  </span>
+                  <span>{note.date || note.createdAt}</span>
                 </CardFooter>
               </Card>
             </Link>

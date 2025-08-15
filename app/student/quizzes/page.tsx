@@ -18,6 +18,7 @@ interface Quiz {
   timeLimit: number
   createdAt: string
   teacherName?: string
+  teacher?: string
   completed?: boolean
 }
 
@@ -42,7 +43,9 @@ export default function QuizzesPage() {
         let assignedQuizzes: Quiz[] = []
 
         if (teacherQuizzes) {
-          assignedQuizzes = JSON.parse(teacherQuizzes)
+          const allTeacherQuizzes = JSON.parse(teacherQuizzes)
+          // Filter quizzes by student's grade
+          assignedQuizzes = allTeacherQuizzes.filter((quiz: Quiz) => quiz.grade === grade)
         }
 
         // Get completed quizzes
@@ -60,6 +63,7 @@ export default function QuizzesPage() {
         }))
 
         setQuizzes(markedQuizzes)
+        console.log("Loaded quizzes for grade", grade, ":", markedQuizzes) // Debug log
       } catch (error) {
         console.error("Error loading quizzes:", error)
         setQuizzes([])
@@ -76,7 +80,7 @@ export default function QuizzesPage() {
     }
   }, [])
 
-  // Filter quizzes based on search query, tab, and user's grade
+  // Filter quizzes based on search query and tab
   const filteredQuizzes = quizzes.filter((quiz) => {
     // First filter by search query
     const matchesSearch =
@@ -90,10 +94,7 @@ export default function QuizzesPage() {
       (activeTab === "pending" && !quiz.completed) ||
       (activeTab === "completed" && quiz.completed)
 
-    // Then filter by grade - quizzes should match student's grade
-    const matchesGrade = quiz.grade === userGrade.toString()
-
-    return matchesSearch && matchesTab && matchesGrade
+    return matchesSearch && matchesTab
   })
 
   return (
@@ -168,7 +169,7 @@ export default function QuizzesPage() {
                     <Clock className="mr-1 h-3 w-3" />
                     {quiz.timeLimit} minutes
                   </span>
-                  <span>By: {quiz.teacherName || "Unknown Teacher"}</span>
+                  <span>By: {quiz.teacherName || quiz.teacher || "Unknown Teacher"}</span>
                 </CardFooter>
               </Card>
             </Link>
