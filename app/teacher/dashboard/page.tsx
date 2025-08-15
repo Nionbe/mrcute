@@ -5,20 +5,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Users, BookOpen, FileText, BarChart3, Plus, Clock, CheckCircle, TrendingUp } from "lucide-react"
+import { Users, BookOpen, FileText, TrendingUp, CheckCircle, Plus, Eye } from "lucide-react"
 import Link from "next/link"
 
-interface Quiz {
+interface Student {
   id: string
-  title: string
-  subject: string
+  name: string
   grade: string
-  questions: number
-  timeLimit: number
-  createdAt: string
-  status: "active" | "draft"
-  submissions: number
+  avatar?: string
+  lastActive: string
+  progress: number
+  status: "active" | "inactive"
 }
 
 interface Note {
@@ -26,102 +25,129 @@ interface Note {
   title: string
   subject: string
   grade: string
-  content: string
   createdAt: string
   views: number
 }
 
-interface Student {
+interface Quiz {
   id: string
-  name: string
+  title: string
+  subject: string
   grade: string
-  lastActive: string
-  progress: number
+  questions: number
+  submissions: number
+  createdAt: string
 }
 
 export default function TeacherDashboard() {
-  const [userName, setUserName] = useState("")
-  const [quizzes, setQuizzes] = useState<Quiz[]>([])
-  const [notes, setNotes] = useState<Note[]>([])
   const [students, setStudents] = useState<Student[]>([])
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    totalQuizzes: 0,
-    totalNotes: 0,
-    averageScore: 0,
-  })
+  const [notes, setNotes] = useState<Note[]>([])
+  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load user data
-    const storedUserName = localStorage.getItem("userName")
-    if (storedUserName) {
-      setUserName(storedUserName)
+    // Load data from localStorage
+    const loadData = () => {
+      try {
+        // Load students
+        const savedStudents = localStorage.getItem("students")
+        if (savedStudents) {
+          setStudents(JSON.parse(savedStudents))
+        } else {
+          // Default students data
+          const defaultStudents: Student[] = [
+            {
+              id: "1",
+              name: "Alice Johnson",
+              grade: "Grade 10",
+              lastActive: "2 hours ago",
+              progress: 85,
+              status: "active",
+            },
+            {
+              id: "2",
+              name: "Bob Smith",
+              grade: "Grade 10",
+              lastActive: "1 day ago",
+              progress: 72,
+              status: "active",
+            },
+            {
+              id: "3",
+              name: "Carol Davis",
+              grade: "Grade 11",
+              lastActive: "3 hours ago",
+              progress: 91,
+              status: "active",
+            },
+          ]
+          setStudents(defaultStudents)
+          localStorage.setItem("students", JSON.stringify(defaultStudents))
+        }
+
+        // Load teacher notes
+        const savedNotes = localStorage.getItem("teacherNotes")
+        if (savedNotes) {
+          setNotes(JSON.parse(savedNotes))
+        }
+
+        // Load teacher quizzes
+        const savedQuizzes = localStorage.getItem("teacherQuizzes")
+        if (savedQuizzes) {
+          setQuizzes(JSON.parse(savedQuizzes))
+        }
+
+        setLoading(false)
+      } catch (error) {
+        console.error("Error loading dashboard data:", error)
+        setLoading(false)
+      }
     }
 
-    // Load teacher's quizzes
-    const teacherQuizzes = JSON.parse(localStorage.getItem("teacherQuizzes") || "[]")
-    setQuizzes(teacherQuizzes.slice(0, 3)) // Show latest 3
-
-    // Load teacher's notes
-    const teacherNotes = JSON.parse(localStorage.getItem("teacherNotes") || "[]")
-    setNotes(teacherNotes.slice(0, 3)) // Show latest 3
-
-    // Load mock student data
-    const mockStudents: Student[] = [
-      {
-        id: "ST001",
-        name: "Alice Johnson",
-        grade: "10",
-        lastActive: "2 hours ago",
-        progress: 85,
-      },
-      {
-        id: "ST002",
-        name: "Bob Smith",
-        grade: "10",
-        lastActive: "1 day ago",
-        progress: 72,
-      },
-      {
-        id: "ST003",
-        name: "Carol Davis",
-        grade: "9",
-        lastActive: "3 hours ago",
-        progress: 91,
-      },
-    ]
-    setStudents(mockStudents)
-
-    // Calculate stats
-    setStats({
-      totalStudents: mockStudents.length,
-      totalQuizzes: teacherQuizzes.length,
-      totalNotes: teacherNotes.length,
-      averageScore: 82,
-    })
+    loadData()
   }, [])
+
+  const stats = {
+    totalStudents: students.length,
+    activeStudents: students.filter((s) => s.status === "active").length,
+    totalNotes: notes.length,
+    totalQuizzes: quizzes.length,
+    avgProgress:
+      students.length > 0 ? Math.round(students.reduce((acc, s) => acc + s.progress, 0) / students.length) : 0,
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back, {userName || "Teacher"}! 👋</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Here's what's happening with your classes today.</p>
+          <h1 className="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back! Here's what's happening with your classes.</p>
         </div>
-        <div className="flex gap-2 mt-4 sm:mt-0">
-          <Link href="/teacher/quizzes/create">
-            <Button className="bg-green-600 hover:bg-green-700">
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/teacher/notes">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Note
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/teacher/quizzes/create">
               <Plus className="h-4 w-4 mr-2" />
               Create Quiz
-            </Button>
-          </Link>
-          <Link href="/teacher/notes">
-            <Button variant="outline">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Add Note
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -134,195 +160,187 @@ export default function TeacherDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalStudents}</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +2 from last week
-            </p>
+            <p className="text-xs text-muted-foreground">{stats.activeStudents} active students</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Quizzes</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalQuizzes}</div>
-            <p className="text-xs text-muted-foreground">
-              <CheckCircle className="h-3 w-3 inline mr-1" />
-              {quizzes.filter((q) => q.status === "active").length} active
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Study Notes</CardTitle>
+            <CardTitle className="text-sm font-medium">Notes Created</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalNotes}</div>
-            <p className="text-xs text-muted-foreground">
-              <Clock className="h-3 w-3 inline mr-1" />
-              {notes.reduce((sum, note) => sum + note.views, 0)} total views
-            </p>
+            <p className="text-xs text-muted-foreground">Study materials shared</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Quizzes Created</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageScore}%</div>
-            <p className="text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 inline mr-1" />
-              +5% from last month
-            </p>
+            <div className="text-2xl font-bold">{stats.totalQuizzes}</div>
+            <p className="text-xs text-muted-foreground">Assessments available</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Progress</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.avgProgress}%</div>
+            <p className="text-xs text-muted-foreground">Class performance</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Recent Quizzes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Recent Quizzes
-              <Link href="/teacher/quizzes">
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {quizzes.length > 0 ? (
-              quizzes.map((quiz) => (
-                <div key={quiz.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">{quiz.title}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        Grade {quiz.grade}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {quiz.subject}
-                      </Badge>
-                      <span className="text-xs text-gray-500">{quiz.submissions} submissions</span>
+      {/* Main Content */}
+      <Tabs defaultValue="students" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="students">Students</TabsTrigger>
+          <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="recent">Recent Activity</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="students" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Student Overview</CardTitle>
+              <CardDescription>Monitor your students' progress and activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {students.map((student) => (
+                  <div key={student.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <Avatar>
+                        <AvatarImage src={student.avatar || "/placeholder.svg"} />
+                        <AvatarFallback>
+                          {student.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{student.name}</p>
+                        <p className="text-sm text-muted-foreground">{student.grade}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{student.progress}% Complete</p>
+                        <Progress value={student.progress} className="w-24" />
+                      </div>
+                      <Badge variant={student.status === "active" ? "default" : "secondary"}>{student.status}</Badge>
+                      <p className="text-xs text-muted-foreground">{student.lastActive}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={quiz.status === "active" ? "default" : "secondary"}>{quiz.status}</Badge>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No quizzes created yet</p>
-                <Link href="/teacher/quizzes/create">
-                  <Button variant="outline" size="sm" className="mt-2 bg-transparent">
-                    Create Your First Quiz
-                  </Button>
-                </Link>
+                ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* Recent Notes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Recent Notes
-              <Link href="/teacher/notes">
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {notes.length > 0 ? (
-              notes.map((note) => (
-                <div key={note.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">{note.title}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        Grade {note.grade}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {note.subject}
-                      </Badge>
-                      <span className="text-xs text-gray-500">{note.views} views</span>
+        <TabsContent value="content" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Notes</CardTitle>
+                <CardDescription>Your latest study materials</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {notes.slice(0, 5).map((note) => (
+                    <div key={note.id} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <p className="font-medium">{note.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {note.subject} • {note.grade}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline">
+                          <Eye className="h-3 w-3 mr-1" />
+                          {note.views}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
+                  ))}
+                  {notes.length === 0 && <p className="text-center text-muted-foreground py-4">No notes created yet</p>}
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No notes created yet</p>
-                <Link href="/teacher/notes">
-                  <Button variant="outline" size="sm" className="mt-2 bg-transparent">
-                    Create Your First Note
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
 
-      {/* Student Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Student Progress
-            <Link href="/teacher/students">
-              <Button variant="ghost" size="sm">
-                View All Students
-              </Button>
-            </Link>
-          </CardTitle>
-          <CardDescription>Recent activity from your students</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {students.map((student) => (
-              <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={`/placeholder-user.jpg`} />
-                    <AvatarFallback>
-                      {student.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{student.name}</p>
-                    <p className="text-xs text-gray-500">
-                      Grade {student.grade} • Last active {student.lastActive}
-                    </p>
-                  </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Quizzes</CardTitle>
+                <CardDescription>Your latest assessments</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {quizzes.slice(0, 5).map((quiz) => (
+                    <div key={quiz.id} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <p className="font-medium">{quiz.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {quiz.subject} • {quiz.grade}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline">{quiz.questions} questions</Badge>
+                        <Badge variant="secondary">{quiz.submissions} submissions</Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {quizzes.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No quizzes created yet</p>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{student.progress}%</p>
-                    <Progress value={student.progress} className="w-20 h-2" />
-                  </div>
-                </div>
-              </div>
-            ))}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="recent" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest actions and updates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Recent activity items */}
+                <div className="flex items-center space-x-4 p-3 border rounded">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium">Quiz "Math Basics" completed by 5 students</p>
+                    <p className="text-sm text-muted-foreground">2 hours ago</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4 p-3 border rounded">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium">New note "Science Chapter 5" created</p>
+                    <p className="text-sm text-muted-foreground">1 day ago</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4 p-3 border rounded">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium">3 new students joined your class</p>
+                    <p className="text-sm text-muted-foreground">2 days ago</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

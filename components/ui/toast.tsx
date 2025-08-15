@@ -105,12 +105,12 @@ interface ToastOptions {
   title?: string
   description?: string
   variant?: "default" | "destructive"
-  duration?: number
+  action?: ToastActionElement
 }
 
 let toastCount = 0
 
-const toast = ({ title, description, variant = "default", duration = 5000 }: ToastOptions) => {
+const toast = ({ title, description, variant = "default", action }: ToastOptions) => {
   const id = `toast-${++toastCount}`
 
   // Create toast element
@@ -123,11 +123,7 @@ const toast = ({ title, description, variant = "default", duration = 5000 }: Toa
       ${title ? `<div class="text-sm font-semibold">${title}</div>` : ""}
       ${description ? `<div class="text-sm opacity-90">${description}</div>` : ""}
     </div>
-    <button class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100" onclick="this.parentElement.remove()">
-      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-      </svg>
-    </button>
+    ${action ? `<button class="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100" onclick="this.parentElement.remove()">${action}</button>` : ""}
   `
 
   // Add to DOM
@@ -149,7 +145,7 @@ const toast = ({ title, description, variant = "default", duration = 5000 }: Toa
         toastElement.remove()
       }
     }, 300)
-  }, duration)
+  }, 5000)
 
   return {
     id,

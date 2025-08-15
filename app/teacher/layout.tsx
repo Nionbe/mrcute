@@ -5,10 +5,12 @@ import { DashboardSidebar } from "@/components/dashboard-sidebar"
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen w-full">
       <DashboardSidebar role="teacher" />
-      <div className="flex-1">
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <div className="flex flex-1 flex-col">
+        <main className="flex-1 p-4 lg:p-6">
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
       </div>
     </div>
   )
